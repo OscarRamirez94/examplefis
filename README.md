@@ -1,57 +1,92 @@
-# Spring-Boot and Camel XML QuickStart
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.gateway.filter.GatewayFilter;
+import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.server.ServerHttpRequest;
+import org.springframework.web.server.ServerHttpResponse;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
 
-This example demonstrates how to configure Camel routes in Spring Boot via a Spring XML configuration file.
+import java.io.IOException;
+import java.util.List;
 
-The application utilizes the Spring [`@ImportResource`](http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/context/annotation/ImportResource.html) annotation to load a Camel Context definition via a [camel-context.xml](src/main/resources/spring/camel-context.xml) file on the classpath.
+public class TransferFilter implements GatewayFilter {
 
-### Building
+    @Autowired
+    private WebClient.Builder webClientBuilder;
 
-The example can be built with
+    @Autowired
+    private ObjectMapper objectMapper;  // Jackson ObjectMapper para convertir a JSON
 
-    mvn clean install
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        // 1. Leer el cuerpo de la solicitud
+        return readRequestBody(exchange)
+                // 2. Convertir el cuerpo en JSON
+                .flatMap(jsonBody -> {
+                    // 3. Crear un nuevo ServerHttpRequest con el cuerpo modificado
+                    ServerHttpRequest modifiedRequest = createModifiedRequest(exchange, jsonBody);
 
-### Running the example in OpenShift
+                    // 4. Crear un nuevo ServerWebExchange con la solicitud modificada
+                    ServerWebExchange modifiedExchange = exchange.mutate()
+                            .request(modifiedRequest)
+                            .build();
 
-It is assumed that:
-- OpenShift platform is already running, if not you can find details how to [Install OpenShift at your site](https://docs.openshift.com/container-platform/3.3/install_config/index.html).
-- Your system is configured for Fabric8 Maven Workflow, if not you can find a [Get Started Guide](https://access.redhat.com/documentation/en/red-hat-jboss-middleware-for-openshift/3/single/red-hat-jboss-fuse-integration-services-20-for-openshift/)
+                    // 5. Enviar la solicitud al endpoint "/score" con el cuerpo JSON
+                    return sendToScoreEndpoint(jsonBody, exchange)
+                            .flatMap(response -> {
+                                // Continuamos con la cadena de filtros
+                                return chain.filter(modifiedExchange);
+                            });
+                });
+    }
 
-The example can be built and run on OpenShift using a single goal:
+    // Método 1: Leer el cuerpo de la solicitud
+    private Mono<String> readRequestBody(ServerWebExchange exchange) {
+        return exchange.getRequest().getBody().collectList().flatMap(dataBufferList -> {
+            byte[] bodyBytes = concatenateBody(dataBufferList);
+            try {
+                // Convertir los bytes a JSON (como String)
+                return Mono.just(new String(bodyBytes));
+            } catch (Exception e) {
+                return Mono.error(new RuntimeException("Error procesando el cuerpo", e));
+            }
+        });
+    }
 
-    mvn fabric8:deploy
+    // Método 2: Concatenar los fragmentos de DataBuffer en un solo arreglo de bytes
+    private byte[] concatenateBody(List<DataBuffer> dataBufferList) {
+        return dataBufferList.stream()
+                .map(dataBuffer -> {
+                    byte[] bytes = new byte[dataBuffer.readableByteCount()];
+                    dataBuffer.read(bytes);
+                    return bytes;
+                })
+                .reduce((first, second) -> {
+                    byte[] combined = new byte[first.length + second.length];
+                    System.arraycopy(first, 0, combined, 0, first.length);
+                    System.arraycopy(second, 0, combined, first.length, second.length);
+                    return combined;
+                })
+                .orElse(new byte[0]);
+    }
 
-To list all the running pods:
+    // Método 3: Crear una nueva solicitud ServerHttpRequest con el cuerpo modificado
+    private ServerHttpRequest createModifiedRequest(ServerWebExchange exchange, String jsonBody) {
+        return exchange.getRequest().mutate()
+                .body(Mono.just(exchange.getResponse().bufferFactory().wrap(jsonBody.getBytes())))
+                .build();
+    }
 
-    oc get pods
-
-Then find the name of the pod that runs this quickstart, and output the logs from the running pods with:
-
-    oc logs <name of pod>
-
-You can also use the OpenShift [web console](https://docs.openshift.com/container-platform/3.3/getting_started/developers_console.html#developers-console-video) to manage the running pods, and view logs and much more.
-
-### Running via an S2I Application Template
-
-Application templates allow you deploy applications to OpenShift by filling out a form in the OpenShift console that allows you to adjust deployment parameters.  This template uses an S2I source build so that it handle building and deploying the application for you.
-
-First, import the Fuse image streams:
-
-    oc create -f https://raw.githubusercontent.com/jboss-fuse/application-templates/GA/fis-image-streams.json
-
-Then create the quickstart template:
-
-    oc create -f https://raw.githubusercontent.com/jboss-fuse/application-templates/GA/quickstarts/spring-boot-camel-xml-template.json
-
-Now when you use "Add to Project" button in the OpenShift console, you should see a template for this quickstart. 
-
-
-### Integration Testing
-
-The example includes a [fabric8 arquillian](https://github.com/fabric8io/fabric8/tree/v2.2.170.redhat/components/fabric8-arquillian) OpenShift Integration Test. 
-Once the container image has been built and deployed in OpenShift, the integration test can be run with:
-
-    mvn test -Dtest=*KT
-
-The test is disabled by default and has to be enabled using `-Dtest`. Open Source Community documentation at [Integration Testing](https://fabric8.io/guide/testing.html) and [Fabric8 Arquillian Extension](https://fabric8.io/guide/arquillian.html) provide more information on writing full fledged black box integration tests for OpenShift. 
-
-
+    // Método 4: Enviar la solicitud al endpoint "/score"
+    private Mono<String> sendToScoreEndpoint(String jsonBody, ServerWebExchange exchange) {
+        return webClientBuilder.build()
+                .post()
+                .uri("http://localhost:8080/score")  // URL del endpoint /score
+                .headers(httpHeaders -> httpHeaders.addAll(exchange.getRequest().getHeaders()))  // Mantener los headers originales
+                .bodyValue(jsonBody)  // Enviar el cuerpo como JSON
+                .retrieve()
+                .bodyToMono(String.class);  // Aquí manejamos la respuesta del endpoint
+    }
+}
