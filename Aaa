@@ -1,0 +1,29 @@
+webClient.get()
+    .uri("/mi-endpoint")
+    .retrieve()
+    .onStatus(HttpStatus::is4xxClientError, response -> {
+        // Si el código de estado es 4xx (por ejemplo 400), puedes manejarlo aquí
+        return response.bodyToMono(String.class)  // Puedes capturar el cuerpo del error como un String
+                .flatMap(body -> {
+                    // Puedes decidir lanzar un error controlado o devolver el cuerpo del error
+                    throw new CustomException("Error controlado: " + body);
+                });
+    })
+    .onStatus(HttpStatus::is5xxServerError, response -> {
+        // Manejar errores de servidor (5xx)
+        return response.bodyToMono(String.class)
+                .flatMap(body -> {
+                    // Manejar el cuerpo del error en caso de un error de servidor
+                    throw new CustomException("Error del servidor: " + body);
+                });
+    })
+    .toEntity(MiClase.class)  // Intenta mapear el cuerpo a MiClase
+    .doOnSuccess(responseEntity -> {
+        // Procesar la respuesta exitosa aquí
+        System.out.println("Respuesta exitosa: " + responseEntity.getBody());
+    })
+    .doOnError(throwable -> {
+        // Manejar errores generales aquí
+        System.err.println("Error: " + throwable.getMessage());
+    })
+    .subscribe();
