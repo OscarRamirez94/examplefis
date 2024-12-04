@@ -1,0 +1,71 @@
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.server.WebFilterChain;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.ClientResponse;
+import reactor.core.publisher.Mono;
+
+import org.springframework.stereotype.Component;
+
+@Component
+public class CustomGlobalFilter implements WebFilter {
+
+    private final WebClient webClient;
+
+    // Constructor que recibe un WebClient (puedes usar WebClient.Builder para personalizar)
+    public CustomGlobalFilter(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.baseUrl("http://example.com").build();
+    }
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        return webClient.get()
+                .uri("/mi-endpoint")
+                .retrieve()
+                .onStatus(HttpStatus::is4xxClientError, response -> {
+                    // Si hay un error 4xx, procesamos la respuesta y la modificamos.
+                    return response.bodyToMono(String.class)
+                            .flatMap(body -> {
+                                // Crear una respuesta personalizada
+                                exchange.getResponse().setStatusCode(HttpStatus.BAD_REQUEST); // Establecer el código 400
+                                exchange.getResponse().getHeaders().setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+
+                                // Establecer el cuerpo de la respuesta (puedes modificar según sea necesario)
+                                String errorResponse = "{ \"error\": \"Solicitud incorrecta\", \"details\": \"" + body + "\" }";
+                                byte[] bytes = errorResponse.getBytes();
+
+                                // Escribir el cuerpo de la respuesta en el flujo
+                                return exchange.getResponse().writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(bytes)))
+                                        .then(Mono.empty()); // Detenemos el flujo y no seguimos con otros filtros
+                            });
+                })
+                .onStatus(HttpStatus::is5xxServerError, response -> {
+                    // Si hay un error 5xx, procesamos la respuesta y la modificamos.
+                    return response.bodyToMono(String.class)
+                            .flatMap(body -> {
+                                // Crear una respuesta personalizada para el error 5xx
+                                exchange.getResponse().setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR); // Establecer código 500
+                                exchange.getResponse().getHeaders().setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+
+                                // Respuesta de error 5xx
+                                String errorResponse = "{ \"error\": \"Error interno del servidor\", \"details\": \"" + body + "\" }";
+                                byte[] bytes = errorResponse.getBytes();
+
+                                // Escribir el cuerpo de la respuesta
+                                return exchange.getResponse().writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(bytes)))
+                                        .then(Mono.empty()); // Detener el flujo
+                            });
+                })
+                .toEntity(String.class) // Si todo está bien, procesar la respuesta como String
+                .flatMap(responseEntity -> {
+                    // Si la respuesta es exitosa, continuamos con el siguiente filtro
+                    return chain.filter(exchange);
+                })
+                .onErrorResume(e -> {
+                    // Manejo de errores generales
+                    exchange.getResponse().setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);
+                    return exchange.getResponse().setComplete(); // Terminar el flujo en caso de error inesperado
+                });
+    }
+}
