@@ -1,0 +1,117 @@
+public class CustomerDto {
+    private String customerId;
+    private String name;
+
+    // Getters y Setters
+    public String getCustomerId() {
+        return customerId;
+    }
+
+    public void setCustomerId(String customerId) {
+        this.customerId = customerId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    @Override
+    public String toString() {
+        return "CustomerDto{customerId='" + customerId + "', name='" + name + "'}";
+    }
+}
+
+public class OrderDto {
+    private String orderId;
+    private String orderDate;
+
+    // Getters y Setters
+    public String getOrderId() {
+        return orderId;
+    }
+
+    public void setOrderId(String orderId) {
+        this.orderId = orderId;
+    }
+
+    public String getOrderDate() {
+        return orderDate;
+    }
+
+    public void setOrderDate(String orderDate) {
+        this.orderDate = orderDate;
+    }
+
+    @Override
+    public String toString() {
+        return "OrderDto{orderId='" + orderId + "', orderDate='" + orderDate + "'}";
+    }
+}
+
+public enum Flow {
+    CUSTOMER, ORDER
+}
+
+
+import java.util.Map;
+
+public class DtoConverter {
+
+    public static Object mapToDto(Map<String, Object> inputMap, Flow flow) {
+        switch (flow) {
+            case CUSTOMER:
+                return mapToCustomerDto(inputMap);
+            case ORDER:
+                return mapToOrderDto(inputMap);
+            default:
+                throw new IllegalArgumentException("Flow no soportado: " + flow);
+        }
+    }
+
+    private static CustomerDto mapToCustomerDto(Map<String, Object> map) {
+        CustomerDto customerDto = new CustomerDto();
+        customerDto.setCustomerId((String) map.get("customerId"));
+        customerDto.setName((String) map.get("name"));
+        return customerDto;
+    }
+
+    private static OrderDto mapToOrderDto(Map<String, Object> map) {
+        OrderDto orderDto = new OrderDto();
+        orderDto.setOrderId((String) map.get("orderId"));
+        orderDto.setOrderDate((String) map.get("orderDate"));
+        return orderDto;
+    }
+}
+
+
++++
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class Main {
+
+    public static void main(String[] args) {
+        Map<String, Object> customerMap = new HashMap<>();
+        customerMap.put("customerId", "123");
+        customerMap.put("name", "Juan Pérez");
+
+        CustomerDto customerDto = (CustomerDto) DtoConverter.mapToDto(customerMap, Flow.CUSTOMER);
+        System.out.println(customerDto);
+
+        Map<String, Object> orderMap = new HashMap<>();
+        orderMap.put("orderId", "ORD001");
+        orderMap.put("orderDate", "2024-12-05");
+
+        OrderDto orderDto = (OrderDto) DtoConverter.mapToDto(orderMap, Flow.ORDER);
+        System.out.println(orderDto);
+    }
+}
+
+
+
+
