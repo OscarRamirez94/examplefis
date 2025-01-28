@@ -1,35 +1,47 @@
+import org.springframework.web.server.ServerWebExchange;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
-import org.springframework.web.server.ServerWebExchange;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 @Component
 public class CustomGatewayFilter implements GatewayFilter {
 
-    private final BodyTransformer bodyTransformer;
     private final WebClientService webClientService;
 
-    public CustomGatewayFilter(BodyTransformer bodyTransformer, WebClientService webClientService) {
-        this.bodyTransformer = bodyTransformer;
+    public CustomGatewayFilter(WebClientService webClientService) {
         this.webClientService = webClientService;
     }
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        // Llamar al método que transforma el cuerpo de la solicitud a Mono<String>
-        return bodyTransformer.transformBodyToJson(exchange)
-                .flatMap(bodyAsString -> {
-                    // Llamar al método que invoca el servicio externo con WebClient
-                    return webClientService.callExternalService(bodyAsString)
-                            .flatMap(response -> {
-                                // Aquí puedes hacer lo que necesites con la respuesta
-                                // Ejemplo: loguear la respuesta
-                                System.out.println("Response from external service: " + response);
-
-                                // Continuar con el flujo normal
-                                return chain.filter(exchange);
-                            });
+        // Paso 1: Obtener el cuerpo del Exchange como Mono<String>
+        return getBodyFromExchange(exchange)
+                .flatMap(body -> {
+                    // Paso 2: Llamar al servicio externo, pasando el cuerpo
+                    return webClientService.callExternalService(body, exchange);
+                })
+                .flatMap(response -> {
+                    // Paso 3: Si la respuesta es 200 OK, continuar con el flujo
+                    if (response != null) {
+                        exchange.getResponse().setStatusCode(HttpStatus.OK);  // Establecer el código de estado como 200
+                        exchange.getResponse().writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(response.getBytes())));  // Escribir el cuerpo de la respuesta
+                    }
+                    // Paso 4: Continuar con el flujo de la solicitud
+                    return chain.filter(exchange);
+                })
+                .onErrorResume(e -> {
+                    // Si ocurre un error, continuar con el flujo sin modificar la respuesta
+                    return chain.filter(exchange);
                 });
+    }
+
+    // Método para obtener el cuerpo de la solicitud como Mono<String>
+    private Mono<String> getBodyFromExchange(ServerWebExchange exchange) {
+        return exchange.getRequest().getBody()
+                .map(dataBuffer -> {
+                    return dataBuffer.toString(StandardCharsets.UTF_8);  // Convertir a String
+                })
+                .collect(Collectors.joining());  // Unir todos los fragmentos del cuerpo
     }
 }
