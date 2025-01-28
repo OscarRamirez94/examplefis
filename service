@@ -1,48 +1,51 @@
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+@Service
 public class WebClientService {
 
     private final WebClient webClient;
 
     public WebClientService(WebClient.Builder webClientBuilder) {
-        this.webClient = webClientBuilder.baseUrl("http://example.com").build();  // URL del servicio intermedio
+        // Suponiendo que el servicio intermedio tiene una URL base
+        this.webClient = webClientBuilder.baseUrl("http://example.com").build();
     }
 
     public Mono<ResponseEntity<String>> callExternalService(String body) {
         return webClient.post()
-                .uri("/your-endpoint")
-                .bodyValue(body)  // El cuerpo de la solicitud
-                .retrieve()
-                .onStatus(HttpStatus::is5xxServerError, response -> {
-                    // Si la respuesta tiene un código 5xx, devolvemos una respuesta con error
-                    return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Internal server error"));
+                .uri("/your-endpoint")  // Cambia esta URI según tu caso
+                .bodyValue(body)        // Estableces el cuerpo de la solicitud
+                .retrieve()             // Realiza la llamada
+                .onStatus(HttpStatus::is2xxSuccessful, response -> {
+                    // Si el estado es 200 OK, continuamos el flujo
+                    return response.bodyToMono(String.class)
+                            .flatMap(responseBody -> {
+                                // Retornamos el cuerpo del servicio
+                                return Mono.just(ResponseEntity.ok(responseBody));
+                            });
                 })
                 .onStatus(HttpStatus::is4xxClientError, response -> {
-                    // Si la respuesta tiene un código 4xx, lo procesamos
+                    // Si la respuesta es 4xx (errores de cliente)
+                    if (response.statusCode().equals(HttpStatus.UNPROCESSABLE_ENTITY)) {
+                        // Si es 422, devolvemos la misma respuesta (el cuerpo de la respuesta)
+                        return response.bodyToMono(String.class)
+                                .flatMap(errorBody -> Mono.just(ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(errorBody)));
+                    }
                     return response.bodyToMono(String.class)
-                            .flatMap(errorBody -> {
-                                if (response.statusCode().equals(HttpStatus.UNPROCESSABLE_ENTITY)) {
-                                    // Si es 422, devolvemos la misma respuesta
-                                    return response.bodyToMono(String.class)
-                                            .flatMap(body -> Mono.just(ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(body)));
-                                }
-                                // Si no es 422, devolvemos un error genérico
-                                return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error 4xx: " + errorBody));
-                            });
+                            .flatMap(errorBody -> Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorBody)));
                 })
-                .onStatus(HttpStatus::is2xxSuccessful, response -> {
-                    // Si la respuesta tiene un código 2xx, procesamos el cuerpo y continuamos el flujo
+                .onStatus(HttpStatus::is5xxServerError, response -> {
+                    // Si la respuesta tiene un código 5xx, puedes manejarlo aquí
                     return response.bodyToMono(String.class)
-                            .flatMap(bodyResponse -> {
-                                return Mono.just(ResponseEntity.ok(bodyResponse));  // Continuamos con el flujo
-                            });
+                            .flatMap(errorBody -> Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorBody)));
                 })
-                .bodyToMono(String.class)  // Aquí definimos el tipo de la respuesta como String
+                .bodyToMono(String.class)  // Procesamos el cuerpo como String
                 .flatMap(responseBody -> {
-                    // Si el código de estado es 200, retornamos el ResponseEntity con el cuerpo
+                    // Si la respuesta es 200, procesamos el cuerpo y lo devolvemos
                     return Mono.just(ResponseEntity.ok(responseBody));
                 });
     }
