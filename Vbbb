@@ -1,71 +1,49 @@
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.server.WebFilter;
-import org.springframework.web.server.WebFilterChain;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.ClientResponse;
+import org.springframework.http.HttpStatus;
 import reactor.core.publisher.Mono;
-
 import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
 
 @Component
-public class CustomGlobalFilter implements WebFilter {
+public class WebClientService {
 
     private final WebClient webClient;
 
-    // Constructor que recibe un WebClient (puedes usar WebClient.Builder para personalizar)
-    public CustomGlobalFilter(WebClient.Builder webClientBuilder) {
-        this.webClient = webClientBuilder.baseUrl("http://example.com").build();
+    public WebClientService(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.baseUrl("http://example.com").build();  // URL del servicio intermedio
     }
 
-    @Override
-    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        return webClient.get()
-                .uri("/mi-endpoint")
+    // Método para realizar la llamada al servicio y manejar la respuesta según el código de estado
+    public Mono<Void> callExternalService(ServerWebExchange exchange, GatewayFilterChain chain) {
+        return webClient.post()
+                .uri("/your-endpoint")  // Endpoint del servicio
+                .bodyValue(exchange.getAttribute("cachedRequestBodyObject"))  // El cuerpo de la solicitud
                 .retrieve()
+                .onStatus(HttpStatus::is2xxSuccessful, response -> {
+                    // Si la respuesta es 200 OK, simplemente continuamos con el flujo normal
+                    return Mono.empty();
+                })
                 .onStatus(HttpStatus::is4xxClientError, response -> {
-                    // Si hay un error 4xx, procesamos la respuesta y la modificamos.
-                    return response.bodyToMono(String.class)
-                            .flatMap(body -> {
-                                // Crear una respuesta personalizada
-                                exchange.getResponse().setStatusCode(HttpStatus.BAD_REQUEST); // Establecer el código 400
-                                exchange.getResponse().getHeaders().setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
-
-                                // Establecer el cuerpo de la respuesta (puedes modificar según sea necesario)
-                                String errorResponse = "{ \"error\": \"Solicitud incorrecta\", \"details\": \"" + body + "\" }";
-                                byte[] bytes = errorResponse.getBytes();
-
-                                // Escribir el cuerpo de la respuesta en el flujo
-                                return exchange.getResponse().writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(bytes)))
-                                        .then(Mono.empty()); // Detenemos el flujo y no seguimos con otros filtros
-                            });
+                    // Si el código de estado es 422, tratamos la respuesta como un error
+                    if (response.statusCode() == HttpStatus.UNPROCESSABLE_ENTITY) {
+                        return response.bodyToMono(String.class).flatMap(body -> {
+                            // Crear una respuesta personalizada con el código 422 y el cuerpo recibido
+                            exchange.getResponse().setStatusCode(HttpStatus.UNPROCESSABLE_ENTITY);
+                            exchange.getResponse().writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(body.getBytes())));
+                            return Mono.empty();
+                        });
+                    }
+                    // Si no es 422, retornamos un error genérico para otros códigos 4xx
+                    return Mono.error(new RuntimeException("Unexpected error: " + response.statusCode()));
                 })
                 .onStatus(HttpStatus::is5xxServerError, response -> {
-                    // Si hay un error 5xx, procesamos la respuesta y la modificamos.
-                    return response.bodyToMono(String.class)
-                            .flatMap(body -> {
-                                // Crear una respuesta personalizada para el error 5xx
-                                exchange.getResponse().setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR); // Establecer código 500
-                                exchange.getResponse().getHeaders().setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
-
-                                // Respuesta de error 5xx
-                                String errorResponse = "{ \"error\": \"Error interno del servidor\", \"details\": \"" + body + "\" }";
-                                byte[] bytes = errorResponse.getBytes();
-
-                                // Escribir el cuerpo de la respuesta
-                                return exchange.getResponse().writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(bytes)))
-                                        .then(Mono.empty()); // Detener el flujo
-                            });
+                    // Si el código de estado es 500 (Internal Server Error), simplemente continuamos con el flujo
+                    return Mono.empty();  // Continuamos con el siguiente filtro sin modificar la respuesta
                 })
-                .toEntity(String.class) // Si todo está bien, procesar la respuesta como String
-                .flatMap(responseEntity -> {
-                    // Si la respuesta es exitosa, continuamos con el siguiente filtro
-                    return chain.filter(exchange);
-                })
-                .onErrorResume(e -> {
-                    // Manejo de errores generales
-                    exchange.getResponse().setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);
-                    return exchange.getResponse().setComplete(); // Terminar el flujo en caso de error inesperado
+                .bodyToMono(String.class)  // Convertir la respuesta a String (puedes adaptarlo a lo que necesitas)
+                .doOnTerminate(() -> {
+                    // Continuar con el flujo si es 200 OK o si fue 500
+                    chain.filter(exchange).subscribe();
                 });
     }
 }
