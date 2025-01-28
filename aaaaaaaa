@@ -1,0 +1,52 @@
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.server.WebFilterChain;
+import reactor.core.publisher.Mono;
+import org.springframework.http.HttpStatus;
+
+public class CustomGatewayFilter implements WebFilter {
+
+    private final WebClient webClient;
+
+    public CustomGatewayFilter(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.baseUrl("http://example.com").build(); // URL del servicio intermedio
+    }
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        // Paso 1: Leer el cuerpo de la solicitud original
+        return exchange.getRequest().getBody()
+                .collectList()
+                .map(bufferList -> {
+                    // Convertimos los fragmentos de Body en un solo String
+                    String body = bufferList.stream()
+                            .map(buffer -> buffer.toString(StandardCharsets.UTF_8))
+                            .reduce("", String::concat);
+                    return body;
+                })
+                .flatMap(body -> {
+                    // Paso 2: Usar WebClient para enviar el cuerpo capturado a un servicio intermedio
+                    return webClient.post()
+                            .uri("/target-endpoint") // Cambia la URI al endpoint de tu servicio intermedio
+                            .bodyValue(body)  // Le pasamos el body al WebClient
+                            .retrieve()
+                            .onStatus(statusCode -> statusCode.is4xxClientError(), clientResponse -> {
+                                // Si el código de estado es 4xx, terminamos el flujo
+                                return Mono.error(new RuntimeException("4xx Error"));  // Manejo de error
+                            })
+                            .onStatus(statusCode -> statusCode.is5xxServerError(), clientResponse -> {
+                                // Si es un error 5xx, también continuamos el flujo
+                                return Mono.empty();  // Pero no detenemos el flujo en caso de error 5xx
+                            })
+                            .bodyToMono(String.class)  // Obtener respuesta como String
+                            .flatMap(responseBody -> {
+                                // Aquí tomamos el responseBody de la respuesta del servicio intermedio
+                                System.out.println("Respuesta del servicio intermedio: " + responseBody);
+
+                                // Si la respuesta es 200 OK, continuar con el flujo del Gateway
+                                return chain.filter(exchange);  // Continuamos con el siguiente filtro
+                            });
+                });
+    }
+}
