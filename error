@@ -1,0 +1,32 @@
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
+import org.springframework.http.HttpStatus;
+
+public class WebClientExample {
+
+    private WebClient webClient;
+
+    public WebClientExample(WebClient webClient) {
+        this.webClient = webClient;
+    }
+
+    public Mono<String> getResponse() {
+        return webClient.get()
+                .uri("/path/to/endpoint")
+                .retrieve()
+                .onStatus(HttpStatus::is4xxClientError, clientResponse -> {
+                    // Deserializar el cuerpo de la respuesta en un BffResponse<MyData, MyError>
+                    return clientResponse.bodyToMono(new ParameterizedTypeReference<BffResponse<MyData, MyError>>() {})
+                            .flatMap(bffResponse -> {
+                                // Lanza una excepción personalizada con el BffResponse
+                                return Mono.error(new BffResponseException(bffResponse)); // Lanza la excepción con el detalle del error
+                            });
+                })
+                .bodyToMono(String.class) // Si la respuesta es exitosa (2xx), procesamos el cuerpo como String u otro tipo
+                .doOnTerminate(() -> {
+                    // Acción cuando el flujo termina (sea con éxito o con error)
+                    System.out.println("El flujo ha terminado.");
+                });
+    }
+}
