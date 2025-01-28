@@ -1,1 +1,58 @@
-aa
+import org.springframework.cloud.gateway.filter.GatewayFilter;
+import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.cloud.gateway.filter.server.ServerHttpRequest;
+import org.springframework.cloud.gateway.filter.server.ServerHttpResponse;
+import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.util.UriComponentsBuilder;
+import reactor.core.publisher.Mono;
+
+import java.util.Map;
+
+@Component
+public class PreRequestFilter implements GatewayFilter {
+
+    private final WebClient.Builder webClientBuilder;
+
+    public PreRequestFilter(WebClient.Builder webClientBuilder) {
+        this.webClientBuilder = webClientBuilder;
+    }
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        // Hacer la llamada a un endpoint previo utilizando WebClient
+        String url = "http://otro-endpoint.com/consulta"; // El endpoint que se llama antes
+
+        // Llamada al endpoint usando WebClient
+        return webClientBuilder.baseUrl(url)
+                .get()
+                .retrieve()
+                .toEntity(Map.class)  // Si la respuesta es de tipo Map
+                .flatMap(response -> {
+                    int statusCode = response.getStatusCode().value();
+                    Map<String, String> headers = response.getHeaders().toSingleValueMap(); // Obtener headers
+                    Map<String, Object> body = (Map<String, Object>) response.getBody();  // Obtener el body
+
+                    // Si la respuesta es 200 OK, continúa con el flujo normal
+                    if (statusCode == 200) {
+                        // Puedes pasar los headers obtenidos a la siguiente solicitud si lo necesitas
+                        ServerHttpRequest.Builder requestBuilder = exchange.getRequest().mutate();
+                        headers.forEach(requestBuilder::header);
+
+                        // Continúa con el flujo normal de Spring Gateway
+                        return chain.filter(exchange.mutate().request(requestBuilder.build()).build());
+                    }
+
+                    // Si el código es 422, responde con el estado original
+                    if (statusCode == 422) {
+                        ServerHttpResponse responseToClient = exchange.getResponse();
+                        responseToClient.setStatusCode(HttpStatus.UNPROCESSABLE_ENTITY);
+                        return responseToClient.setComplete();
+                    }
+
+                    // En caso de que el estado no sea 200 ni 422, continuar con la petición original
+                    return chain.filter(exchange);
+                });
+    }
+}
