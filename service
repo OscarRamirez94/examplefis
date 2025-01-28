@@ -1,0 +1,22 @@
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
+
+@Component
+public class WebClientService {
+
+    private final WebClient webClient;
+
+    public WebClientService(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.baseUrl("http://example.com").build();  // URL del servicio
+    }
+
+    // Método para llamar al servicio con WebClient
+    public Mono<String> callExternalService(String bodyAsString) {
+        return webClient.post()
+                .uri("/your-endpoint")  // Endpoint de destino
+                .bodyValue(bodyAsString)  // Usar el Mono<String> del cuerpo
+                .retrieve()
+                .bodyToMono(String.class);  // Retorna la respuesta como Mono<String>
+    }
+}
