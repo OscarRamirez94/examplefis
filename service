@@ -1,52 +1,59 @@
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
-@Service
-public class WebClientService {
+import java.nio.charset.StandardCharsets;
+
+@Component
+public class CustomGatewayFilter implements WebFilter {
 
     private final WebClient webClient;
 
-    public WebClientService(WebClient.Builder webClientBuilder) {
-        // Suponiendo que el servicio intermedio tiene una URL base
-        this.webClient = webClientBuilder.baseUrl("http://example.com").build();
+    public CustomGatewayFilter(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.baseUrl("http://example.com").build(); // Configura la URL base de tu servicio intermedio
     }
 
-    public Mono<ResponseEntity<String>> callExternalService(String body) {
-        return webClient.post()
-                .uri("/your-endpoint")  // Cambia esta URI según tu caso
-                .bodyValue(body)        // Estableces el cuerpo de la solicitud
-                .retrieve()             // Realiza la llamada
-                .onStatus(HttpStatus::is2xxSuccessful, response -> {
-                    // Si el estado es 200 OK, continuamos el flujo
-                    return response.bodyToMono(String.class)
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        // Paso 1: Leer el cuerpo de la solicitud (de forma reactiva)
+        return exchange.getRequest().getBody()
+                .collectList()  // Recogemos todos los fragmentos del cuerpo
+                .map(bufferList -> {
+                    // Convertimos los fragmentos de Body en un solo String
+                    String body = bufferList.stream()
+                            .map(buffer -> buffer.toString(StandardCharsets.UTF_8)) // Convertimos los ByteBuffers en String
+                            .reduce("", String::concat); // Concatenamos todos los fragmentos
+
+                    return body; // Este es el cuerpo como String
+                })
+                .flatMap(body -> {
+                    // Paso 2: Usar WebClient para enviar el cuerpo capturado como parte de una solicitud POST
+                    return webClient.post()
+                            .uri("/target-endpoint") // Cambia la URI al endpoint que deseas consumir
+                            .bodyValue(body) // Usamos el cuerpo leído y lo pasamos al body del POST
+                            .retrieve() // Ejecuta la solicitud
+                            .onStatus(status -> status.is2xxSuccessful(), response -> {
+                                // Si el status es 2xx (200, etc.), seguimos con el flujo del Gateway
+                                return Mono.empty();
+                            })
+                            .onStatus(status -> status.is4xxClientError(), response -> {
+                                // Si el status es 4xx (como 422), puedes manejarlo aquí
+                                return Mono.error(new Exception("Error 422: Unprocessable Entity"));
+                            })
+                            .onStatus(status -> status.is5xxServerError(), response -> {
+                                // Si el status es 5xx, podemos continuar con el filtro
+                                return Mono.empty();
+                            })
+                            .bodyToMono(String.class) // Convertimos la respuesta en un Mono<String> (o el tipo que sea necesario)
                             .flatMap(responseBody -> {
-                                // Retornamos el cuerpo del servicio
-                                return Mono.just(ResponseEntity.ok(responseBody));
+                                // Aquí puedes hacer algo con la respuesta, si lo deseas
+                                System.out.println("Respuesta del servicio intermedio: " + responseBody);
+                                // Continuamos con el flujo del Gateway
+                                return chain.filter(exchange);
                             });
-                })
-                .onStatus(HttpStatus::is4xxClientError, response -> {
-                    // Si la respuesta es 4xx (errores de cliente)
-                    if (response.statusCode().equals(HttpStatus.UNPROCESSABLE_ENTITY)) {
-                        // Si es 422, devolvemos la misma respuesta (el cuerpo de la respuesta)
-                        return response.bodyToMono(String.class)
-                                .flatMap(errorBody -> Mono.just(ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(errorBody)));
-                    }
-                    return response.bodyToMono(String.class)
-                            .flatMap(errorBody -> Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorBody)));
-                })
-                .onStatus(HttpStatus::is5xxServerError, response -> {
-                    // Si la respuesta tiene un código 5xx, puedes manejarlo aquí
-                    return response.bodyToMono(String.class)
-                            .flatMap(errorBody -> Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorBody)));
-                })
-                .bodyToMono(String.class)  // Procesamos el cuerpo como String
-                .flatMap(responseBody -> {
-                    // Si la respuesta es 200, procesamos el cuerpo y lo devolvemos
-                    return Mono.just(ResponseEntity.ok(responseBody));
                 });
     }
 }
