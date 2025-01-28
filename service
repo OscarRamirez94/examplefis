@@ -1,8 +1,8 @@
-import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.ClientResponse;
 import reactor.core.publisher.Mono;
 import org.springframework.stereotype.Component;
-import org.springframework.web.server.ServerWebExchange;
 
 @Component
 public class WebClientService {
@@ -13,26 +13,33 @@ public class WebClientService {
         this.webClient = webClientBuilder.baseUrl("http://example.com").build();  // URL del servicio intermedio
     }
 
-    public Mono<String> callExternalService(String body, ServerWebExchange exchange) {
+    public Mono<String> callExternalService(String body) {
         return webClient.post()
-                .uri("/your-endpoint")  // Endpoint del servicio intermedio
+                .uri("/your-endpoint")
                 .bodyValue(body)  // Usamos el body proporcionado
                 .retrieve()
-                .onStatus(HttpStatus::is2xxSuccessful, response -> {
-                    // Si la respuesta es 200 OK, devuelvo el cuerpo de la respuesta
-                    return response.bodyToMono(String.class);
+                .onStatus(statusCode -> statusCode.value() >= 200 && statusCode.value() < 300, response -> {
+                    // Si el código de estado es 2xx (exitoso), usa flatMap para manejar la respuesta
+                    return response.bodyToMono(String.class)
+                            .flatMap(bodyString -> {
+                                // Aquí puedes hacer cualquier transformación adicional que necesites
+                                System.out.println("Respuesta exitosa: " + bodyString);  // Por ejemplo, loguear el cuerpo
+                                return Mono.just(bodyString);  // Devuelves el cuerpo de la respuesta como Mono<String>
+                            });
                 })
-                .onStatus(HttpStatus::is4xxClientError, response -> {
-                    // Si el código es 422 Unprocessable Entity, simplemente lo retornamos
-                    if (response.statusCode() == HttpStatus.UNPROCESSABLE_ENTITY) {
-                        return response.bodyToMono(String.class);
-                    }
-                    return Mono.error(new RuntimeException("Unexpected error: " + response.statusCode()));
+                .onStatus(statusCode -> statusCode.equals(HttpStatus.UNPROCESSABLE_ENTITY), response -> {
+                    // Si el código de estado es 422 (Unprocessable Entity), puedes manejarlo también
+                    return response.bodyToMono(String.class)
+                            .flatMap(bodyString -> {
+                                // Puedes procesar el cuerpo aquí si es necesario
+                                System.out.println("Respuesta 422: " + bodyString);
+                                return Mono.just(bodyString);  // Regresamos el cuerpo en Mono<String>
+                            });
                 })
-                .onStatus(HttpStatus::is5xxServerError, response -> {
-                    // Si hay un error 5xx, no realizamos ninguna acción
-                    return Mono.empty();
+                .onStatus(statusCode -> statusCode.equals(HttpStatus.INTERNAL_SERVER_ERROR), response -> {
+                    // Si el código de estado es 500 (Internal Server Error), retornamos Mono.empty()
+                    return Mono.empty();  // Continuamos sin interrumpir el flujo
                 })
-                .bodyToMono(String.class);  // Convertimos la respuesta a Mono<String>
+                .bodyToMono(String.class);  // Esto asegura que si no hay coincidencias, devolvemos Mono<String> por defecto
     }
 }
