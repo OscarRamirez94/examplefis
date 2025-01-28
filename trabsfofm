@@ -1,0 +1,24 @@
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
+import org.springframework.util.StreamUtils;
+import java.io.IOException;
+
+public class BodyTransformer {
+
+    // Método para transformar el cuerpo en un Mono<String>
+    public Mono<String> transformBodyToJson(ServerWebExchange exchange) {
+        // Obtener el cuerpo cacheado (como byte[])
+        byte[] body = exchange.getAttribute("cachedRequestBodyObject");
+
+        // Convertir el cuerpo en String (suponiendo que el cuerpo es JSON)
+        String bodyAsString;
+        try {
+            bodyAsString = new String(body);
+        } catch (Exception e) {
+            return Mono.error(new RuntimeException("Error al transformar el cuerpo a String", e));
+        }
+
+        // Retornar el cuerpo como Mono<String>
+        return Mono.just(bodyAsString);
+    }
+}
