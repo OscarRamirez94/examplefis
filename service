@@ -1,6 +1,8 @@
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.stereotype.Component;
+import org.springframework.http.HttpStatus;
 import reactor.core.publisher.Mono;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
 
 @Component
 public class WebClientService {
@@ -8,15 +10,29 @@ public class WebClientService {
     private final WebClient webClient;
 
     public WebClientService(WebClient.Builder webClientBuilder) {
-        this.webClient = webClientBuilder.baseUrl("http://example.com").build();  // URL del servicio
+        this.webClient = webClientBuilder.baseUrl("http://example.com").build();  // URL del servicio intermedio
     }
 
-    // Método para llamar al servicio con WebClient
-    public Mono<String> callExternalService(String bodyAsString) {
+    public Mono<String> callExternalService(String body, ServerWebExchange exchange) {
         return webClient.post()
-                .uri("/your-endpoint")  // Endpoint de destino
-                .bodyValue(bodyAsString)  // Usar el Mono<String> del cuerpo
+                .uri("/your-endpoint")  // Endpoint del servicio intermedio
+                .bodyValue(body)  // Usamos el body proporcionado
                 .retrieve()
-                .bodyToMono(String.class);  // Retorna la respuesta como Mono<String>
+                .onStatus(HttpStatus::is2xxSuccessful, response -> {
+                    // Si la respuesta es 200 OK, devuelvo el cuerpo de la respuesta
+                    return response.bodyToMono(String.class);
+                })
+                .onStatus(HttpStatus::is4xxClientError, response -> {
+                    // Si el código es 422 Unprocessable Entity, simplemente lo retornamos
+                    if (response.statusCode() == HttpStatus.UNPROCESSABLE_ENTITY) {
+                        return response.bodyToMono(String.class);
+                    }
+                    return Mono.error(new RuntimeException("Unexpected error: " + response.statusCode()));
+                })
+                .onStatus(HttpStatus::is5xxServerError, response -> {
+                    // Si hay un error 5xx, no realizamos ninguna acción
+                    return Mono.empty();
+                })
+                .bodyToMono(String.class);  // Convertimos la respuesta a Mono<String>
     }
 }
