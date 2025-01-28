@@ -22,3 +22,41 @@ public class BodyTransformer {
         return Mono.just(bodyAsString);
     }
 }
+
+
+
+
+
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class Main {
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+
+    public static void main(String[] args) {
+        MyObject obj = null;  // Este es el objeto que vamos a revisar
+
+        // Validación en una sola línea
+        if (obj == null) {
+            logger.info("El objeto es null.");
+        } else if (obj.getScore() != null && !obj.getScore().isEmpty()) {
+            logger.info("El objeto tiene un score no vacío: " + obj.getScore());
+        } else {
+            logger.info("El objeto tiene un score vacío o null.");
+        }
+    }
+
+    // Clase de ejemplo con un campo "score"
+    static class MyObject {
+        private String score;
+
+        public MyObject(String score) {
+            this.score = score;
+        }
+
+        public String getScore() {
+            return score;
+        }
+    }
+}
