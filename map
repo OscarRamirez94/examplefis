@@ -1,0 +1,25 @@
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+public class Main {
+    public static void main(String[] args) {
+        // Crear un mapa con llaves en mayúsculas y minúsculas
+        Map<String, String> originalMap = new HashMap<>();
+        originalMap.put("Nombre", "Juan");
+        originalMap.put("Edad", "25");
+        originalMap.put("Ciudad", "Madrid");
+
+        // Convertir todas las llaves a minúsculas
+        Map<String, String> lowerCaseMap = originalMap.entrySet().stream()
+                .collect(Collectors.toMap(
+                        entry -> entry.getKey().toLowerCase(), // Convertimos la llave a minúsculas
+                        Map.Entry::getValue  // Mantenemos el valor original
+                ));
+
+        // Mostrar el nuevo mapa con llaves en minúsculas
+        System.out.println("Mapa con llaves en minúsculas:");
+        lowerCaseMap.forEach((key, value) -> System.out.println(key + ": " + value));
+    }
+}
