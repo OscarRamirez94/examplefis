@@ -24,14 +24,14 @@ public class WebClientConfig {
             clientRequest.headers().forEach((name, values) -> 
                 values.forEach(value -> System.out.println(name + ": " + value)));
 
-            // Si la solicitud tiene cuerpo (POST, PUT, etc.), lo leemos sin consumir el flujo
+            // Si la solicitud tiene cuerpo, lo leemos y lo mostramos sin consumir el flujo
             if (clientRequest.body() != null) {
-                return clientRequest.bodyToMono(String.class)  // Convertimos el cuerpo en String para mostrarlo
-                        .doOnNext(body -> System.out.println("Request Body: " + body))  // Imprimir el cuerpo
-                        .then(Mono.just(clientRequest));  // Continuamos con la solicitud
+                return clientRequest.bodyToMono(String.class)  // Convertimos el cuerpo a String
+                        .doOnNext(body -> System.out.println("Request Body: " + body))  // Mostrar el cuerpo
+                        .then(Mono.just(clientRequest));  // Continuar con la solicitud sin consumir el flujo
             }
 
-            return Mono.just(clientRequest);  // Si no tiene cuerpo, simplemente retornamos la solicitud
+            return Mono.just(clientRequest);  // Si no tiene cuerpo, continuamos con la solicitud
         });
     }
 
