@@ -1,0 +1,26 @@
+import feign.RequestInterceptor;
+import feign.Response;
+import feign.Util;
+import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+
+@Component
+public class FeignRequestInterceptor implements RequestInterceptor {
+
+    @Override
+    public void apply(feign.RequestTemplate requestTemplate) {
+        // Ver la solicitud (request)
+        System.out.println("Solicitud Feign: ");
+        System.out.println("URL: " + requestTemplate.url());
+        System.out.println("Método: " + requestTemplate.method());
+        System.out.println("Encabezados: " + requestTemplate.headers());
+
+        // Puedes obtener el cuerpo de la solicitud si lo necesitas (espero que sea un JSON, por ejemplo)
+        if (requestTemplate.body() != null) {
+            String body = new String(requestTemplate.body(), StandardCharsets.UTF_8);
+            System.out.println("Cuerpo de la solicitud: " + body);
+        }
+    }
+}
