@@ -1,0 +1,18 @@
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+class MyServiceTest {
+
+    @Test
+    void testMyMethodThrowsIllegalArgumentException() {
+        MyService myService = new MyService();
+        
+        // Usamos assertThrows para verificar que se lanza la excepción esperada
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            myService.myMethod();
+        });
+        
+        // Verificamos que el mensaje de la excepción sea el esperado
+        assertEquals("Invalid argument", exception.getMessage());
+    }
+}
