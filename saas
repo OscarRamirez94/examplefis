@@ -2,29 +2,49 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 @Configuration
 public class WebClientConfig {
 
     @Bean
-    public WebClient webClient() {
+    public WebClient.Builder webClientBuilder() {
         return WebClient.builder()
-                .baseUrl("https://api.example.com") // Aquí configuramos la URL base
-                .filter(logRequest()) // Agregamos un filtro para registrar las solicitudes
-                .build();
+                .filter(logRequest())  // Filtro para registrar la solicitud
+                .filter(logResponse()); // Filtro para registrar la respuesta
     }
 
-    // Filtro para registrar solicitudes y respuestas
+    // Filtro para registrar la solicitud, incluyendo los headers y el body
     private ExchangeFilterFunction logRequest() {
         return ExchangeFilterFunction.ofRequestProcessor(clientRequest -> {
+            // Registrar la URL y el método de la solicitud
             System.out.println("Request: " + clientRequest.method() + " " + clientRequest.url());
+
+            // Registrar los headers de la solicitud
             clientRequest.headers().forEach((name, values) -> 
                 values.forEach(value -> System.out.println(name + ": " + value)));
-            return Mono.just(clientRequest);
-        })
-        .andThen(ExchangeFilterFunction.ofResponseProcessor(clientResponse -> {
+
+            // Si la solicitud tiene cuerpo (POST, PUT, etc.), lo leemos sin consumir el flujo
+            if (clientRequest.body() != null) {
+                return clientRequest.bodyToMono(String.class)  // Convertimos el cuerpo en String para mostrarlo
+                        .doOnNext(body -> System.out.println("Request Body: " + body))  // Imprimir el cuerpo
+                        .then(Mono.just(clientRequest));  // Continuamos con la solicitud
+            }
+
+            return Mono.just(clientRequest);  // Si no tiene cuerpo, simplemente retornamos la solicitud
+        });
+    }
+
+    // Filtro para registrar la respuesta
+    private ExchangeFilterFunction logResponse() {
+        return ExchangeFilterFunction.ofResponseProcessor(clientResponse -> {
+            // Registrar el estado de la respuesta
             System.out.println("Response status: " + clientResponse.statusCode());
-            return Mono.just(clientResponse);
-        }));
+
+            // Registrar el cuerpo de la respuesta (opcional)
+            return clientResponse.bodyToMono(String.class)
+                    .doOnNext(body -> System.out.println("Response Body: " + body))
+                    .then(Mono.just(clientResponse));
+        });
     }
 }
