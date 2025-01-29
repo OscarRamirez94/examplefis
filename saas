@@ -1,0 +1,30 @@
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
+import org.springframework.web.reactive.function.client.WebClient;
+
+@Configuration
+public class WebClientConfig {
+
+    @Bean
+    public WebClient webClient() {
+        return WebClient.builder()
+                .baseUrl("https://api.example.com") // Aquí configuramos la URL base
+                .filter(logRequest()) // Agregamos un filtro para registrar las solicitudes
+                .build();
+    }
+
+    // Filtro para registrar solicitudes y respuestas
+    private ExchangeFilterFunction logRequest() {
+        return ExchangeFilterFunction.ofRequestProcessor(clientRequest -> {
+            System.out.println("Request: " + clientRequest.method() + " " + clientRequest.url());
+            clientRequest.headers().forEach((name, values) -> 
+                values.forEach(value -> System.out.println(name + ": " + value)));
+            return Mono.just(clientRequest);
+        })
+        .andThen(ExchangeFilterFunction.ofResponseProcessor(clientResponse -> {
+            System.out.println("Response status: " + clientResponse.statusCode());
+            return Mono.just(clientResponse);
+        }));
+    }
+}
