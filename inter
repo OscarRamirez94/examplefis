@@ -1,0 +1,9 @@
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.stereotype.Component;
+
+@FeignClient(name = "miServicio", url = "https://api.ejemplo.com", configuration = FeignConfig.class)
+public interface MiServicioFeignClient {
+
+    @GetMapping("/endpoint")
+    String obtenerDatos();
+}
