@@ -1,0 +1,12 @@
+public class BFFResponseException extends RuntimeException {
+    private final BFFResponse<?, ?> bffResponse;
+
+    public BFFResponseException(BFFResponse<?, ?> bffResponse) {
+        super("Error en el servicio: " + (bffResponse != null ? bffResponse.toString() : "Desconocido"));
+        this.bffResponse = bffResponse;
+    }
+
+    public BFFResponse<?, ?> getBffResponse() {
+        return bffResponse;
+    }
+}
