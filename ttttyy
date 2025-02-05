@@ -3,7 +3,6 @@ import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.ClientResponse;
 import reactor.core.publisher.Mono;
 
 @Component
@@ -20,32 +19,23 @@ public class CustomGatewayInterceptor implements WebFilter {
         return webClient.get()
                 .uri("/ruta-del-cliente")
                 .retrieve()
-                .onStatus(status -> status.value() == 200, response -> {
-                    // Cuando la respuesta sea 200, simplemente la devolvemos como un String y seguimos con el filtro
-                    return response.bodyToMono(String.class)
-                            .doOnTerminate(() -> {
-                                // Aquí podemos procesar el String antes de continuar con el flujo
-                            })
-                            .then(chain.filter(exchange)); // Continuar con el siguiente filtro
-                })
-                .onStatus(status -> status.value() == 400, response -> {
-                    // Cuando la respuesta sea 400, deserializamos en BFFResponse
-                    return response.bodyToMono(BFFResponse.class)
-                            .flatMap(bffResponse -> {
-                                // Aquí podemos hacer un procesamiento con BFFResponse, si es necesario
-                                exchange.getAttributes().put("BFFResponse", bffResponse);
-                                // Lógica de manejar 400, podemos devolver el BFFResponse aquí o continuar el flujo
-                                return Mono.just(bffResponse);  // Aquí se puede devolver un Mono con el BFFResponse
-                            });
-                })
                 .onStatus(status -> status.value() == 422, response -> {
-                    // Cuando la respuesta sea 422, lanzamos una excepción controlada con el BFFResponse
+                    // Si el código de estado es 422, deserializamos la respuesta en BFFResponse
                     return response.bodyToMono(BFFResponse.class)
                             .flatMap(bffResponse -> {
-                                // Lanzamos la excepción controlada con el BFFResponse
+                                // Aquí regresamos el BFFResponse como parte del flujo
+                                // Esto interrumpe el flujo normal y puedes devolver el BFFResponse
                                 return Mono.error(new BFFResponseException(bffResponse));
                             });
                 })
-                .then(chain.filter(exchange)); // Continúa con el siguiente filtro si no es 422
+                .onStatus(status -> status.value() != 422, response -> {
+                    // Para cualquier otro código de estado (200, 400, etc.), simplemente continuamos con el siguiente filtro
+                    return response.bodyToMono(String.class) // O cualquier tipo que esperes aquí
+                            .doOnTerminate(() -> {
+                                // Aquí puedes hacer algún procesamiento si es necesario
+                            })
+                            .then(chain.filter(exchange)); // Continúa con el siguiente filtro
+                })
+                .then(chain.filter(exchange)); // Continua con el siguiente filtro si no hay error
     }
 }
