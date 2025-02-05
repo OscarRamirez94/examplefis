@@ -1,5 +1,4 @@
 import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
@@ -21,26 +20,19 @@ public class MiFiltro implements WebFilter {
                     return chain.filter(exchange);
                 })
                 .onErrorResume(e -> {
-                    // Verificamos si el error es un 422
-                    if (e instanceof Exception && e.getMessage().contains("422")) {
-                        // Si es un error 422, retornamos una respuesta con ese error
-                        exchange.getResponse().setStatusCode(HttpStatus.BAD_REQUEST); // O cualquier otro código adecuado
-                        exchange.getResponse().getHeaders().set("Error-Message", "Error 422: Solicitud inválida");
-                        return exchange.getResponse().setComplete(); // Detenemos el flujo
-                    }
-
-                    // Verificamos si el error es de tipo `TipoError`
+                    // Verificamos si el error es una excepción TipoErrorException
                     if (e instanceof TipoErrorException) {
-                        TipoErrorException tipoErrorException = (TipoErrorException) e;
-                        TipoError tipoError = tipoErrorException.getTipoError();
-                        exchange.getResponse().setStatusCode(HttpStatus.BAD_REQUEST);
-                        exchange.getResponse().getHeaders().set("Error-Message", tipoError.getMensaje());
-                        return exchange.getResponse().setComplete(); // Detenemos el flujo
+                        Notificacion notificacion = ((TipoErrorException) e).getTipoError();
+                        // Ahora agregamos la notificación al response del exchange
+                        exchange.getResponse().setStatusCode(HttpStatus.BAD_REQUEST);  // O el código adecuado
+                        exchange.getResponse().getHeaders().set("Error-Message", notificacion.getMensaje());
+                        exchange.getResponse().getHeaders().set("Error-Code", notificacion.getCodigo());
+                        return exchange.getResponse().setComplete();  // Detenemos el flujo
                     }
 
-                    // Si el error no es ninguno de los anteriores, lo tratamos como un error genérico
+                    // Si el error no es de tipo TipoErrorException, lo tratamos como un error genérico
                     exchange.getResponse().setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);
-                    return exchange.getResponse().setComplete(); // Detenemos el flujo
+                    return exchange.getResponse().setComplete();  // Detenemos el flujo
                 });
     }
 }
