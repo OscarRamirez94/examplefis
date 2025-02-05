@@ -1,5 +1,4 @@
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
@@ -23,21 +22,40 @@ public class CustomGatewayInterceptor implements WebFilter {
                 .uri("/ruta-del-cliente")
                 .retrieve()
                 .onStatus(status -> status.value() == 422, response -> {
-                    // Si la respuesta es 422, deserializamos en un BFFResponse
+                    // Si el código de estado es 422, extraemos el cuerpo y lo deserializamos a un BFFResponse
                     return response.bodyToMono(BFFResponse.class)
                             .flatMap(bffResponse -> {
-                                // Aquí construimos el ResponseEntity con el BFFResponse
-                                // y devolvemos la respuesta al cliente con el código 422
+                                // Aquí tenemos el BFFResponse, ahora podemos manipularlo o devolverlo como respuesta
+                                // Puedes realizar cualquier lógica que necesites con el BFFResponse
+
+                                // Si necesitas devolverlo como un ResponseEntity<BFFResponse>
                                 exchange.getResponse().setStatusCode(HttpStatus.UNPROCESSABLE_ENTITY);
-                                return exchange.getResponse().writeWith(Mono.just(exchange.getResponse()
-                                    .bufferFactory().wrap(bffResponse.toString().getBytes())));
+
+                                // Aquí puedes devolver el cuerpo de la respuesta como un Mono
+                                return exchange.getResponse().writeWith(Mono.just(
+                                        exchange.getResponse().bufferFactory().wrap(
+                                                // Serializar el BFFResponse a JSON o cualquier formato necesario
+                                                serializeToJson(bffResponse) // Método ficticio de serialización
+                                        )
+                                ));
                             });
                 })
                 .onStatus(status -> status.value() != 422, response -> {
-                    // Para otros códigos de estado, simplemente continuamos con el siguiente filtro
+                    // Para otros códigos de estado, continuamos con el siguiente filtro
                     return response.bodyToMono(String.class)
-                            .then(chain.filter(exchange));  // Continuar con el siguiente filtro
+                            .then(chain.filter(exchange));  // Continuamos con el siguiente filtro
                 })
-                .then(chain.filter(exchange));  // Continúa con el siguiente filtro si no se lanza error
+                .then(chain.filter(exchange));  // Continua con el siguiente filtro si no hay error
+    }
+
+    // Método ficticio para serializar el BFFResponse a JSON o en el formato que necesites
+    private byte[] serializeToJson(BFFResponse bffResponse) {
+        try {
+            // Usando Jackson para convertir el BFFResponse a bytes (JSON)
+            ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.writeValueAsBytes(bffResponse);
+        } catch (Exception e) {
+            throw new RuntimeException("Error serializando BFFResponse a JSON", e);
+        }
     }
 }
