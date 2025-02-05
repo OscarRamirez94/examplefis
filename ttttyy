@@ -1,8 +1,11 @@
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.ClientResponse;
 import reactor.core.publisher.Mono;
 
 @Component
@@ -20,22 +23,21 @@ public class CustomGatewayInterceptor implements WebFilter {
                 .uri("/ruta-del-cliente")
                 .retrieve()
                 .onStatus(status -> status.value() == 422, response -> {
-                    // Si el código de estado es 422, deserializamos la respuesta en BFFResponse
+                    // Si la respuesta es 422, deserializamos en un BFFResponse
                     return response.bodyToMono(BFFResponse.class)
                             .flatMap(bffResponse -> {
-                                // Aquí regresamos el BFFResponse como parte del flujo
-                                // Esto interrumpe el flujo normal y puedes devolver el BFFResponse
-                                return Mono.error(new BFFResponseException(bffResponse));
+                                // Aquí construimos el ResponseEntity con el BFFResponse
+                                // y devolvemos la respuesta al cliente con el código 422
+                                exchange.getResponse().setStatusCode(HttpStatus.UNPROCESSABLE_ENTITY);
+                                return exchange.getResponse().writeWith(Mono.just(exchange.getResponse()
+                                    .bufferFactory().wrap(bffResponse.toString().getBytes())));
                             });
                 })
                 .onStatus(status -> status.value() != 422, response -> {
-                    // Para cualquier otro código de estado (200, 400, etc.), simplemente continuamos con el siguiente filtro
-                    return response.bodyToMono(String.class) // O cualquier tipo que esperes aquí
-                            .doOnTerminate(() -> {
-                                // Aquí puedes hacer algún procesamiento si es necesario
-                            })
-                            .then(chain.filter(exchange)); // Continúa con el siguiente filtro
+                    // Para otros códigos de estado, simplemente continuamos con el siguiente filtro
+                    return response.bodyToMono(String.class)
+                            .then(chain.filter(exchange));  // Continuar con el siguiente filtro
                 })
-                .then(chain.filter(exchange)); // Continua con el siguiente filtro si no hay error
+                .then(chain.filter(exchange));  // Continúa con el siguiente filtro si no se lanza error
     }
 }
