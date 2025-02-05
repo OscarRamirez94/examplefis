@@ -3,9 +3,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
-import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.ClientResponse;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+
+import java.util.Map;
 
 @Component
 public class CustomGatewayInterceptor implements WebFilter {
@@ -22,40 +24,38 @@ public class CustomGatewayInterceptor implements WebFilter {
                 .uri("/ruta-del-cliente")
                 .retrieve()
                 .onStatus(status -> status.value() == 422, response -> {
-                    // Si el código de estado es 422, extraemos el cuerpo y lo deserializamos a un BFFResponse
-                    return response.bodyToMono(BFFResponse.class)
-                            .flatMap(bffResponse -> {
-                                // Aquí tenemos el BFFResponse, ahora podemos manipularlo o devolverlo como respuesta
-                                // Puedes realizar cualquier lógica que necesites con el BFFResponse
+                    // Si la respuesta tiene un código 422, convertimos el cuerpo a un Map
+                    return response.bodyToMono(Map.class)  // Convertir el cuerpo a un Map
+                            .flatMap(responseBody -> {
+                                // Aquí podemos trabajar con el Map de respuesta
+                                // Por ejemplo, creamos una excepción personalizada con los valores del Map
+                                String errorMessage = (String) responseBody.get("errorMessage");
+                                int errorCode = (Integer) responseBody.get("errorCode");
 
-                                // Si necesitas devolverlo como un ResponseEntity<BFFResponse>
-                                exchange.getResponse().setStatusCode(HttpStatus.UNPROCESSABLE_ENTITY);
+                                // Crear la excepción con los valores del Map
+                                CustomException customException = new CustomException(errorMessage, errorCode);
 
-                                // Aquí puedes devolver el cuerpo de la respuesta como un Mono
-                                return exchange.getResponse().writeWith(Mono.just(
-                                        exchange.getResponse().bufferFactory().wrap(
-                                                // Serializar el BFFResponse a JSON o cualquier formato necesario
-                                                serializeToJson(bffResponse) // Método ficticio de serialización
-                                        )
-                                ));
+                                // Lanza la excepción (esto detendrá el flujo y no continuará con los siguientes filtros)
+                                return Mono.error(customException);
                             });
                 })
                 .onStatus(status -> status.value() != 422, response -> {
-                    // Para otros códigos de estado, continuamos con el siguiente filtro
-                    return response.bodyToMono(String.class)
-                            .then(chain.filter(exchange));  // Continuamos con el siguiente filtro
-                })
-                .then(chain.filter(exchange));  // Continua con el siguiente filtro si no hay error
+                    // Si no es un 422, continúa con el siguiente filtro
+                    return chain.filter(exchange);
+                });
     }
 
-    // Método ficticio para serializar el BFFResponse a JSON o en el formato que necesites
-    private byte[] serializeToJson(BFFResponse bffResponse) {
-        try {
-            // Usando Jackson para convertir el BFFResponse a bytes (JSON)
-            ObjectMapper objectMapper = new ObjectMapper();
-            return objectMapper.writeValueAsBytes(bffResponse);
-        } catch (Exception e) {
-            throw new RuntimeException("Error serializando BFFResponse a JSON", e);
+    // Excepción personalizada
+    public static class CustomException extends RuntimeException {
+        private final int errorCode;
+
+        public CustomException(String message, int errorCode) {
+            super(message);
+            this.errorCode = errorCode;
+        }
+
+        public int getErrorCode() {
+            return errorCode;
         }
     }
-}a
+}
