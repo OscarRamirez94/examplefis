@@ -58,4 +58,4 @@ public class CustomGatewayInterceptor implements WebFilter {
             throw new RuntimeException("Error serializando BFFResponse a JSON", e);
         }
     }
-}
+}a
