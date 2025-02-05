@@ -28,7 +28,6 @@ public class CustomGatewayInterceptor implements WebFilter {
                     return response.bodyToMono(Map.class)  // Convertir el cuerpo a un Map
                             .flatMap(responseBody -> {
                                 // Aquí podemos trabajar con el Map de respuesta
-                                // Por ejemplo, creamos una excepción personalizada con los valores del Map
                                 String errorMessage = (String) responseBody.get("errorMessage");
                                 int errorCode = (Integer) responseBody.get("errorCode");
 
@@ -44,7 +43,7 @@ public class CustomGatewayInterceptor implements WebFilter {
                     return response.bodyToMono(String.class)
                             .then(chain.filter(exchange));  // Continuamos con el siguiente filtro
                 })
-                .then(chain.filter(exchange));  // Continua con el siguiente filtro si no se lanza error
+                .then(chain.filter(exchange));  // Continúa con el siguiente filtro si no se lanza error
     }
 
     // Excepción personalizada
