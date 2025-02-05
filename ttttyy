@@ -1,3 +1,5 @@
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
@@ -7,15 +9,17 @@ import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
-import java.util.Map;
+import java.io.IOException;
 
 @Component
 public class CustomGatewayInterceptor implements WebFilter {
 
     private final WebClient webClient;
+    private final ObjectMapper objectMapper;
 
-    public CustomGatewayInterceptor(WebClient.Builder webClientBuilder) {
+    public CustomGatewayInterceptor(WebClient.Builder webClientBuilder, ObjectMapper objectMapper) {
         this.webClient = webClientBuilder.baseUrl("http://tu-api-base-url").build();
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -24,18 +28,24 @@ public class CustomGatewayInterceptor implements WebFilter {
                 .uri("/ruta-del-cliente")
                 .retrieve()
                 .onStatus(status -> status.value() == 422, response -> {
-                    // Si el código de estado es 422, convertimos el cuerpo a un Map
-                    return response.bodyToMono(Map.class)  // Convertir el cuerpo a un Map
-                            .flatMap(responseBody -> {
-                                // Aquí podemos trabajar con el Map de respuesta
-                                String errorMessage = (String) responseBody.get("errorMessage");
-                                int errorCode = (Integer) responseBody.get("errorCode");
+                    // Si el código de estado es 422, convertir el cuerpo a un BffResponse
+                    return response.bodyToMono(String.class)
+                            .flatMap(body -> {
+                                // Usar TypeReference para deserializar el cuerpo en BffResponse
+                                try {
+                                    BffResponse<Object, Object> bffResponse = objectMapper.readValue(body, 
+                                        new TypeReference<BffResponse<Object, Object>>() {});
+                                    
+                                    // Manejar el error utilizando los valores de BffResponse
+                                    String errorMessage = bffResponse.getErrorMessage();
+                                    int errorCode = bffResponse.getErrorCode();
 
-                                // Crear la excepción con los valores del Map
-                                CustomException customException = new CustomException(errorMessage, errorCode);
-
-                                // Lanza la excepción con Mono.error, interrumpe el flujo
-                                return Mono.error(customException);
+                                    // Lanza la excepción con Mono.error, interrumpe el flujo
+                                    CustomException customException = new CustomException(errorMessage, errorCode);
+                                    return Mono.error(customException);
+                                } catch (IOException e) {
+                                    return Mono.error(new RuntimeException("Error al procesar el cuerpo de la respuesta: " + e.getMessage()));
+                                }
                             });
                 })
                 .onStatus(status -> status.value() != 422, response -> {
