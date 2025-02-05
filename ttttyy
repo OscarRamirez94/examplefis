@@ -24,7 +24,7 @@ public class CustomGatewayInterceptor implements WebFilter {
                 .uri("/ruta-del-cliente")
                 .retrieve()
                 .onStatus(status -> status.value() == 422, response -> {
-                    // Si la respuesta tiene un código 422, convertimos el cuerpo a un Map
+                    // Si el código de estado es 422, convertimos el cuerpo a un Map
                     return response.bodyToMono(Map.class)  // Convertir el cuerpo a un Map
                             .flatMap(responseBody -> {
                                 // Aquí podemos trabajar con el Map de respuesta
@@ -35,14 +35,16 @@ public class CustomGatewayInterceptor implements WebFilter {
                                 // Crear la excepción con los valores del Map
                                 CustomException customException = new CustomException(errorMessage, errorCode);
 
-                                // Lanza la excepción (esto detendrá el flujo y no continuará con los siguientes filtros)
+                                // Lanza la excepción con Mono.error, interrumpe el flujo
                                 return Mono.error(customException);
                             });
                 })
                 .onStatus(status -> status.value() != 422, response -> {
-                    // Si no es un 422, continúa con el siguiente filtro
-                    return chain.filter(exchange);
-                });
+                    // Si no es 422, simplemente continuamos con el siguiente filtro
+                    return response.bodyToMono(String.class)
+                            .then(chain.filter(exchange));  // Continuamos con el siguiente filtro
+                })
+                .then(chain.filter(exchange));  // Continua con el siguiente filtro si no se lanza error
     }
 
     // Excepción personalizada
