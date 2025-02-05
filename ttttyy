@@ -1,72 +1,56 @@
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
-import org.springframework.web.reactive.function.client.ClientResponse;
-import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
+import org.springframework.http.HttpStatus;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferFactory;
 import reactor.core.publisher.Mono;
 
-import java.io.IOException;
+public class MiFiltro implements WebFilter {
 
-@Component
-public class CustomGatewayInterceptor implements WebFilter {
+    private final MiServicio miServicio; // Inyectamos el servicio
 
-    private final WebClient webClient;
-    private final ObjectMapper objectMapper;
-
-    public CustomGatewayInterceptor(WebClient.Builder webClientBuilder, ObjectMapper objectMapper) {
-        this.webClient = webClientBuilder.baseUrl("http://tu-api-base-url").build();
-        this.objectMapper = objectMapper;
+    public MiFiltro(MiServicio miServicio) {
+        this.miServicio = miServicio;
     }
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        return webClient.get()
-                .uri("/ruta-del-cliente")
-                .retrieve()
-                .onStatus(status -> status.value() == 422, response -> {
-                    // Si el código de estado es 422, convertir el cuerpo a un BffResponse
-                    return response.bodyToMono(String.class)
-                            .flatMap(body -> {
-                                // Usar TypeReference para deserializar el cuerpo en BffResponse
-                                try {
-                                    BffResponse<Object, Object> bffResponse = objectMapper.readValue(body, 
-                                        new TypeReference<BffResponse<Object, Object>>() {});
-                                    
-                                    // Manejar el error utilizando los valores de BffResponse
-                                    String errorMessage = bffResponse.getErrorMessage();
-                                    int errorCode = bffResponse.getErrorCode();
+        return miServicio.hacerPeticion()
+                .flatMap(response -> {
+                    // Si la petición fue exitosa, continuamos con el flujo
+                    return chain.filter(exchange);
+                })
+                .onErrorResume(e -> {
+                    // Verificamos si el error es una excepción TipoErrorException
+                    if (e instanceof TipoErrorException) {
+                        Notificacion notificacion = ((TipoErrorException) e).getTipoError();
+                        // Ahora agregamos la notificación al response del exchange en el body
+                        exchange.getResponse().setStatusCode(HttpStatus.BAD_REQUEST);  // O el código adecuado
+                        
+                        // Convertimos la notificación en JSON (puedes usar tu librería de JSON preferida, como Jackson)
+                        String notificacionJson = convertirNotificacionAJson(notificacion);
+                        
+                        DataBufferFactory bufferFactory = exchange.getResponse().bufferFactory();
+                        DataBuffer dataBuffer = bufferFactory.wrap(notificacionJson.getBytes());
 
-                                    // Lanza la excepción con Mono.error, interrumpe el flujo
-                                    CustomException customException = new CustomException(errorMessage, errorCode);
-                                    return Mono.error(customException);
-                                } catch (IOException e) {
-                                    return Mono.error(new RuntimeException("Error al procesar el cuerpo de la respuesta: " + e.getMessage()));
-                                }
-                            });
-                })
-                .onStatus(status -> status.value() != 422, response -> {
-                    // Si no es 422, simplemente continuamos con el siguiente filtro
-                    return response.bodyToMono(String.class)
-                            .then(chain.filter(exchange));  // Continuamos con el siguiente filtro
-                })
-                .then(chain.filter(exchange));  // Continúa con el siguiente filtro si no se lanza error
+                        return exchange.getResponse().writeWith(Mono.just(dataBuffer));  // Escribe el JSON en el cuerpo
+                    }
+
+                    // Si el error no es de tipo TipoErrorException, lo tratamos como un error genérico
+                    exchange.getResponse().setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);
+                    return exchange.getResponse().setComplete();  // Detenemos el flujo
+                });
     }
 
-    // Excepción personalizada
-    public static class CustomException extends RuntimeException {
-        private final int errorCode;
-
-        public CustomException(String message, int errorCode) {
-            super(message);
-            this.errorCode = errorCode;
-        }
-
-        public int getErrorCode() {
-            return errorCode;
+    // Método para convertir el objeto Notificacion en JSON (suponiendo que usas Jackson)
+    private String convertirNotificacionAJson(Notificacion notificacion) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();  // Necesitarás la librería Jackson
+            return objectMapper.writeValueAsString(notificacion);
+        } catch (Exception e) {
+            return "{\"error\": \"Error al convertir la notificación\"}";
         }
     }
 }
