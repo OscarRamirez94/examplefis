@@ -1,38 +1,41 @@
-import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.server.WebFilter;
-import org.springframework.web.server.WebFilterChain;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.http.HttpStatus;
 
-public class MiFiltro implements WebFilter {
+public class MiServicio {
 
-    private final MiServicio miServicio; // Inyectamos el servicio
+    private final WebClient webClient;
 
-    public MiFiltro(MiServicio miServicio) {
-        this.miServicio = miServicio;
+    public MiServicio(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.baseUrl("http://tu-api.com").build();
     }
 
-    @Override
-    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        return miServicio.hacerPeticion()
+    // Método para hacer la petición
+    public Mono<ClientResponse> hacerPeticion() {
+        return webClient.get()
+                .uri("/ruta")
+                .retrieve()
+                .toEntity(String.class)  // Se puede ajustar según el tipo de respuesta
                 .flatMap(response -> {
-                    // Si la petición fue exitosa, continuamos con el flujo
-                    return chain.filter(exchange);
-                })
-                .onErrorResume(e -> {
-                    // Verificamos si el error es una excepción TipoErrorException
-                    if (e instanceof TipoErrorException) {
-                        Notificacion notificacion = ((TipoErrorException) e).getTipoError();
-                        // Ahora agregamos la notificación al response del exchange
-                        exchange.getResponse().setStatusCode(HttpStatus.BAD_REQUEST);  // O el código adecuado
-                        exchange.getResponse().getHeaders().set("Error-Message", notificacion.getMensaje());
-                        exchange.getResponse().getHeaders().set("Error-Code", notificacion.getCodigo());
-                        return exchange.getResponse().setComplete();  // Detenemos el flujo
+                    if (response.getStatusCode() == HttpStatus.UNPROCESSABLE_ENTITY) { // 422
+                        // Aquí manejas el código 422, extraemos la Notificación
+                        String responseBody = response.getBody();
+                        Notificacion notificacion = extraerNotificacion(responseBody);
+                        return Mono.error(new TipoErrorException(notificacion));  // Lanza una excepción con la notificación
+                    } else {
+                        return Mono.just(response);
                     }
-
-                    // Si el error no es de tipo TipoErrorException, lo tratamos como un error genérico
-                    exchange.getResponse().setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);
-                    return exchange.getResponse().setComplete();  // Detenemos el flujo
                 });
+    }
+
+    // Método que extrae la notificación del cuerpo de la respuesta
+    private Notificacion extraerNotificacion(String body) {
+        // Aquí puedes parsear el body según la estructura de tu respuesta
+        // Suponiendo que el cuerpo es un JSON que contiene los campos "mensaje" y "codigo"
+        Notificacion notificacion = new Notificacion();
+        notificacion.setMensaje("Mensaje extraído del cuerpo: " + body);  // Simulando extracción
+        notificacion.setCodigo("Código extraído");
+        return notificacion;
     }
 }
