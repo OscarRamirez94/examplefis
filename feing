@@ -1,0 +1,13 @@
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpHeaders;
+
+@FeignClient(name = "miCliente", url = "http://miapi.com")
+public interface MiClienteFeign {
+
+    @PutMapping("/ruta/{id}")
+    void actualizarDatos(
+        @PathVariable("id") String id,
+        @RequestHeader(HttpHeaders.CONTENT_TYPE) String contentType,  // Establecer Content-Type
+        @RequestBody MiObjeto miObjeto);  // Enviar cuerpo con tipo correcto
+}
