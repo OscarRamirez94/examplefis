@@ -1,19 +1,22 @@
-public void procesarSiEsValido() {
-    if (esObjetoValido(objeto)) {
-        metodoQueProcesaDatos();
-    }
-}
-
 private boolean esObjetoValido(MiObjeto objeto) {
     // Evitar variabilidad en el tiempo de ejecución
     // Realizar todas las comprobaciones necesarias de forma constante
-    boolean isValid = true;
+    if (objeto == null) {
+        return false; // Si el objeto es null, ya no hace falta seguir con las comprobaciones
+    }
 
     // Usar validaciones constantes para evitar tiempos de ejecución variables
-    isValid &= (objeto != null);
-    isValid &= (objeto.getObjeto2() != null);
-    isValid &= (objeto.getObjeto2().getScore() != null);
-    isValid &= (!objeto.getObjeto2().getScore().isEmpty());
+    if (objeto.getObjeto2() == null) {
+        return false; // Si getObjeto2 es null, el objeto no es válido
+    }
 
-    return isValid;
+    if (objeto.getObjeto2().getScore() == null) {
+        return false; // Si getScore es null, el objeto no es válido
+    }
+
+    if (objeto.getObjeto2().getScore().isEmpty()) {
+        return false; // Si getScore está vacío, el objeto no es válido
+    }
+
+    return true; // Si pasa todas las comprobaciones, el objeto es válido
 }
