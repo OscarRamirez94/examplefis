@@ -1,0 +1,29 @@
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.server.WebFilterChain;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
+
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicReference;
+
+@Component
+public class BodyLoggingFilter implements WebFilter {
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        // Guardar el cuerpo de la solicitud original
+        AtomicReference<String> requestBody = new AtomicReference<>("");
+
+        // Leer el cuerpo del request
+        return exchange.getRequest().getBody()
+                .reduce((first, second) -> first) // Concatenar las partes del cuerpo
+                .doOnNext(dataBuffer -> {
+                    // Convertir el buffer de datos en un String
+                    requestBody.set(dataBuffer.toString(StandardCharsets.UTF_8));
+                    // Imprimir el cuerpo
+                    System.out.println("Request Body: " + requestBody.get());
+                })
+                .then(chain.filter(exchange)); // Continuar con el filtrado de la solicitud
+    }
+}
