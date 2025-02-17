@@ -1,0 +1,55 @@
+public class CustomException extends RuntimeException {
+    private Object data; // Este campo puede ser null
+    private Notification notification; // Este campo tendrá valores
+
+    // Constructor, getters y setters
+
+    public CustomException(Object data, Notification notification) {
+        this.data = data;
+        this.notification = notification;
+    }
+
+    public Object getData() {
+        return data;
+    }
+
+    public void setData(Object data) {
+        this.data = data;
+    }
+
+    public Notification getNotification() {
+        return notification;
+    }
+
+    public void setNotification(Notification notification) {
+        this.notification = notification;
+    }
+}
+
+public class Notification {
+    private String message;
+    private int code;
+
+    // Constructor, getters y setters
+
+    public Notification(String message, int code) {
+        this.message = message;
+        this.code = code;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    public int getCode() {
+        return code;
+    }
+
+    public void setCode(int code) {
+        this.code = code;
+    }
+}
