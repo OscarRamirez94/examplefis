@@ -1,29 +1,46 @@
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
-import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
-
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.atomic.AtomicReference;
+import org.springframework.core.io.buffer.DataBuffer;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Component
-public class BodyLoggingFilter implements WebFilter {
+public class CustomGatewayFilter implements WebFilter {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        // Guardar el cuerpo de la solicitud original
-        AtomicReference<String> requestBody = new AtomicReference<>("");
+        // Aquí simulamos la condición que devolvería un 422
+        boolean condition = true; // Esto sería una lógica que determina cuando devolver 422
 
-        // Leer el cuerpo del request
-        return exchange.getRequest().getBody()
-                .reduce((first, second) -> first) // Concatenar las partes del cuerpo
-                .doOnNext(dataBuffer -> {
-                    // Convertir el buffer de datos en un String
-                    requestBody.set(dataBuffer.toString(StandardCharsets.UTF_8));
-                    // Imprimir el cuerpo
-                    System.out.println("Request Body: " + requestBody.get());
-                })
-                .then(chain.filter(exchange)); // Continuar con el filtrado de la solicitud
+        if (condition) {
+            // Regresamos una respuesta con el cuerpo en 422
+            return handle422Response(exchange)
+                    .then(Mono.defer(() -> {
+                        // Después de regresar la respuesta 422, lanzamos una excepción controlada
+                        return Mono.error(new CustomException("Error en procesamiento de datos"));
+                    }));
+        }
+
+        // Si la condición no se cumple, seguimos con el siguiente filtro
+        return chain.filter(exchange);
+    }
+
+    private Mono<Void> handle422Response(ServerWebExchange exchange) {
+        // Cuerpo de la respuesta para 422
+        String responseBody = "{\"message\": \"Error en el procesamiento\", \"status\": 422}";
+
+        // Establecemos el código de estado y el tipo de contenido
+        exchange.getResponse().setStatusCode(HttpStatus.UNPROCESSABLE_ENTITY);
+        exchange.getResponse().getHeaders().add("Content-Type", "application/json");
+
+        // Convertimos el cuerpo a DataBuffer para enviar
+        DataBuffer dataBuffer = exchange.getResponse().bufferFactory().wrap(responseBody.getBytes());
+
+        // Escribimos la respuesta y completamos
+        return exchange.getResponse().writeWith(Mono.just(dataBuffer))
+                .then();
     }
 }
