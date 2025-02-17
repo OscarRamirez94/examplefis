@@ -3,12 +3,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
-import org.springframework.web.server.ServerWebExchangeUtils;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.ClientResponse;
 import reactor.core.publisher.Mono;
 import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferUtils;
 
 @Component
 public class CustomGatewayFilter implements WebFilter {
@@ -21,7 +18,7 @@ public class CustomGatewayFilter implements WebFilter {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        // Hacemos la solicitud al servicio con WebClient
+        // Realizamos la solicitud al servicio con WebClient
         return webClientBuilder.baseUrl("https://api.exapmle.com")
                 .get()  // Aquí utilizamos GET, pero puedes adaptar el método según sea necesario
                 .uri("/endpoint")
@@ -30,22 +27,26 @@ public class CustomGatewayFilter implements WebFilter {
                     // Si la respuesta es 422, leemos el cuerpo original de la respuesta
                     return clientResponse.bodyToMono(String.class)
                             .flatMap(body -> {
-                                // Regresamos el cuerpo de la respuesta 422 con el código correspondiente
+                                // Establecemos el código de estado 422 en la respuesta del Gateway
                                 exchange.getResponse().setStatusCode(HttpStatus.UNPROCESSABLE_ENTITY);
                                 exchange.getResponse().getHeaders().add("Content-Type", "application/json");
+
+                                // Creamos el cuerpo de la respuesta que queremos retornar (puedes personalizar el mensaje)
+                                String responseBody = "{\"message\": \"Error procesando la solicitud: " + body + "\"}";
                                 
-                                // Escribimos el cuerpo de la respuesta original al cliente
-                                DataBuffer dataBuffer = exchange.getResponse().bufferFactory().wrap(body.getBytes());
+                                // Convertimos el cuerpo a DataBuffer para enviarlo
+                                DataBuffer dataBuffer = exchange.getResponse().bufferFactory().wrap(responseBody.getBytes());
+
+                                // Escribimos el cuerpo de la respuesta y detenemos la ejecución del resto de los filtros
                                 return exchange.getResponse().writeWith(Mono.just(dataBuffer))
                                         .then(Mono.defer(() -> {
-                                            // Marcamos la respuesta como iniciada y cortamos el flujo
-                                            ServerWebExchangeUtils.setResponseStarted(exchange);
-                                            return Mono.empty();
+                                            // Cortamos la cadena de filtros
+                                            return exchange.getResponse().setComplete(); // No se ejecutan filtros posteriores
                                         }));
                             });
                 })
                 .flatMap(responseBody -> {
-                    // Si la respuesta no es 422, continúa el flujo normal
+                    // Si la respuesta no es 422, continúa con el flujo normal de filtros
                     return chain.filter(exchange);
                 });
     }
