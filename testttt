@@ -1,0 +1,11 @@
+public void invocarServicio() {
+    webClient.get()
+            .uri("/mi-endpoint")
+            .retrieve()
+            .onStatus(HttpStatus::isError, clientResponse -> Mono.empty()) // No hacer nada en caso de error
+            .bodyToMono(Void.class) // Para manejar explícitamente el caso de respuesta vacía
+            .doOnTerminate(() -> {
+                // Aquí puedes hacer algo tras la invocación
+            })
+            .subscribe();
+}
