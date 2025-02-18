@@ -1,0 +1,25 @@
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.reactive.function.client.ClientResponse;
+import reactor.core.publisher.Mono;
+
+public class MiServicio {
+
+    private final WebClient webClient;
+
+    public MiServicio(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.baseUrl("http://mi-servicio.com").build();
+    }
+
+    public void invocarServicio() {
+        webClient.get()
+                .uri("/mi-endpoint")
+                .retrieve()
+                .onStatus(HttpStatus::isError, clientResponse -> Mono.empty()) // No hacer nada en caso de error
+                .toBodilessEntity()
+                .doOnTerminate(() -> {
+                    // Aquí puedes agregar lo que desees hacer después de la invocación, independientemente del resultado
+                })
+                .subscribe();
+    }
+}
