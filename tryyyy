@@ -1,0 +1,33 @@
+import java.io.*;
+
+public class EjemploInputStream {
+    public InputStream obtenerInputStream() {
+        InputStream inputStream = null;
+        try {
+            // Inicializas el InputStream, por ejemplo, desde un archivo
+            inputStream = new FileInputStream("archivo.txt");
+
+            // Aquí puedes usar el inputStream, por ejemplo leer el archivo o hacer algo con él.
+            // (Este código está solo como ejemplo)
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            // Cerrar el InputStream en el bloque finally
+            if (inputStream != null) {
+                try {
+                    inputStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return inputStream; // Regresamos el InputStream (aunque ya esté cerrado)
+    }
+    
+    public static void main(String[] args) {
+        EjemploInputStream ejemplo = new EjemploInputStream();
+        ejemplo.obtenerInputStream();
+    }
+}
