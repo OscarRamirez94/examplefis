@@ -1,65 +1,66 @@
-import org.springframework.cloud.gateway.filter.GatewayFilter;
-import org.springframework.cloud.gateway.filter.GatewayFilterChain;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.server.ServerWebExchange;
-import reactor.core.publisher.Mono;
+Para simular un DataAccessException en un repositorio usando Mockito, puedes configurar un mock de manera que un método específico del repositorio lance esta excepción cuando sea llamado. En Mockito, puedes hacer esto utilizando el método thenThrow().
 
-import java.util.Map;
+Te mostraré un ejemplo de cómo hacerlo:
 
-@Component
-public class PreRequestFilter implements GatewayFilter {
+Ejemplo de simulación de DataAccessException:
 
-    private final WebClient.Builder webClientBuilder;
+Supongamos que tienes un repositorio que interactúa con una base de datos, y quieres simular que un método de este repositorio lanza una DataAccessException.
 
-    public PreRequestFilter(WebClient.Builder webClientBuilder) {
-        this.webClientBuilder = webClientBuilder;
+import static org.mockito.Mockito.*;
+import org.springframework.dao.DataAccessException;
+import org.junit.jupiter.api.Test;
+import java.util.List;
+
+public class RepositorioTest {
+
+    // Interfaz del repositorio
+    public interface MiRepositorio {
+        List<String> obtenerDatos() throws DataAccessException;
     }
 
-    @Override
-    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        // Obtener los headers y el body de la solicitud original
-        HttpHeaders headers = exchange.getRequest().getHeaders();
-        Map<String, Object> body = exchange.getAttribute("cachedRequestBodyObject");
+    @Test
+    public void testRepositorioConDataAccessException() {
+        // Crear el mock del repositorio
+        MiRepositorio repositorioMock = mock(MiRepositorio.class);
 
-        // Endpoint intermedio
-        String url = "http://otro-endpoint.com/consulta"; // El endpoint previo
+        // Configurar el mock para que lance un DataAccessException cuando se llame al método obtenerDatos
+        when(repositorioMock.obtenerDatos()).thenThrow(new DataAccessException("Error de acceso a datos") {});
 
-        // Realizar la solicitud al servicio intermedio con WebClient
-        return webClientBuilder.baseUrl(url)
-                .method(HttpMethod.valueOf(exchange.getRequest().getMethod().name()))
-                .uri(exchange.getRequest().getURI())
-                .headers(httpHeaders -> httpHeaders.addAll(headers))
-                .bodyValue(body)
-                .retrieve()
-                .toEntity(String.class) // Usamos String para capturar el cuerpo de la respuesta como texto
-                .flatMap(response -> {
-                    int statusCode = response.getStatusCode().value();
-                    String responseBody = response.getBody(); // Obtener el cuerpo de la respuesta
-
-                    // Si la respuesta es 200 OK, continuamos con el flujo normal
-                    if (statusCode == 200) {
-                        return chain.filter(exchange);
-                    }
-
-                    // Si la respuesta es 422, respondemos con el mismo cuerpo y status 422
-                    if (statusCode == 422) {
-                        ServerWebExchange mutatedExchange = exchange.mutate().response(
-                                exchange.getResponse().setStatusCode(HttpStatus.UNPROCESSABLE_ENTITY)
-                        ).build();
-
-                        // Establecer el cuerpo de la respuesta y devolverlo al cliente
-                        mutatedExchange.getResponse().getHeaders().setContentType(HttpHeaders.parseContentType("application/json"));
-                        mutatedExchange.getResponse().writeWith(Mono.just(mutatedExchange.getResponse().bufferFactory().wrap(responseBody.getBytes())));
-
-                        return mutatedExchange.getResponse().setComplete();
-                    }
-
-                    // Para cualquier otro código de estado, continuar con la solicitud original
-                    return chain.filter(exchange);
-                });
+        // Verificar que el DataAccessException es lanzado al llamar al método
+        try {
+            repositorioMock.obtenerDatos();
+        } catch (DataAccessException e) {
+            // Aquí manejas la excepción, por ejemplo, imprimiendo el mensaje
+            System.out.println("Excepción capturada: " + e.getMessage());
+        }
     }
 }
+
+Explicación de los pasos:
+
+1. Crear el mock del repositorio: Usamos mock(MiRepositorio.class) para crear un mock del repositorio que tiene el método obtenerDatos.
+
+
+2. Simular el lanzamiento de la excepción: Usamos when(repositorioMock.obtenerDatos()).thenThrow(new DataAccessException("Error de acceso a datos") {}); para configurar el mock de manera que cuando se invoque el método obtenerDatos, lance una DataAccessException.
+
+
+3. Capturar la excepción: Al ejecutar el método repositorioMock.obtenerDatos(), se lanzará la DataAccessException que hemos configurado, y la podemos capturar dentro de un bloque try-catch.
+
+
+
+Personalización:
+
+Si necesitas simular un DataAccessException específico, puedes pasar un mensaje o configurarlo de acuerdo a tus necesidades.
+
+Si el método lanza otras excepciones o realiza otras acciones, también puedes simular eso con thenThrow() o configurar otros stubs para diferentes métodos del mock.
+
+
+Consideraciones adicionales:
+
+Asegúrate de importar correctamente las clases de Mockito y Spring, como DataAccessException.
+
+Este tipo de simulación es muy útil cuando quieres probar cómo tu código maneja excepciones sin tener que interactuar con una base de datos real.
+
+
+Si tienes más dudas o un caso específico que quieras simular, no dudes en comentarlo.
+
