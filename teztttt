@@ -1,0 +1,60 @@
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+class YourClassTest {
+
+    private YourClass yourClass;
+    private VeridasValidationFlow validationFlow;
+    private VeridasDocumentType veridasDocumentType;
+
+    @BeforeEach
+    void setUp() {
+        yourClass = new YourClass(); // La clase que contiene el método getDocumentAsByteArray
+        validationFlow = mock(VeridasValidationFlow.class);
+        veridasDocumentType = mock(VeridasDocumentType.class);
+    }
+
+    @Test
+    void testGetDocumentAsByteArray() {
+        // Datos de prueba
+        String base64String = "U29tZSBkYXRh"; // Esto es "Some data" en Base64
+        byte[] expectedByteArray = Base64.getDecoder().decode(base64String);
+        
+        // Simular el comportamiento del método getDocumentB64AsByteArray
+        when(validationFlow.getDocumentB64AsByteArray(anyList(), eq(veridasDocumentType)))
+                .thenReturn(Optional.of(base64String));
+        
+        // Llamar al método a probar
+        Optional<byte[]> result = yourClass.getDocumentAsByteArray(List.of(validationFlow), veridasDocumentType);
+        
+        // Verificar los resultados
+        assertTrue(result.isPresent(), "El resultado debe estar presente");
+        assertArrayEquals(expectedByteArray, result.get(), "El arreglo de bytes debe ser el esperado");
+        
+        // Verificar que se llamó al método getDocumentB64AsByteArray con los argumentos correctos
+        verify(validationFlow, times(1)).getDocumentB64AsByteArray(anyList(), eq(veridasDocumentType));
+    }
+
+    @Test
+    void testGetDocumentAsByteArrayEmptyOptional() {
+        // Simular el caso en que el resultado es un Optional vacío
+        when(validationFlow.getDocumentB64AsByteArray(anyList(), eq(veridasDocumentType)))
+                .thenReturn(Optional.empty());
+
+        // Llamar al método a probar
+        Optional<byte[]> result = yourClass.getDocumentAsByteArray(List.of(validationFlow), veridasDocumentType);
+
+        // Verificar que el resultado es un Optional vacío
+        assertFalse(result.isPresent(), "El resultado debe estar vacío");
+        
+        // Verificar que se llamó al método getDocumentB64AsByteArray
+        verify(validationFlow, times(1)).getDocumentB64AsByteArray(anyList(), eq(veridasDocumentType));
+    }
+}
