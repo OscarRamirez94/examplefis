@@ -3,9 +3,25 @@ public InputStream getInputStream() throws IOException {
 }
 
 public void usarInputStream() {
-    try (InputStream is = getInputStream()) {
-        // Usa el InputStream aquí
+    InputStream is = null;
+    try {
+        is = getInputStream();
+        // Pasar el InputStream a otro método para su uso
+        otroMetodo(is);
     } catch (IOException e) {
-        // Maneja excepciones
+        // Manejo de excepciones
+    } finally {
+        // Aquí puedes cerrar el InputStream cuando ya no se necesite
+        if (is != null) {
+            try {
+                is.close();
+            } catch (IOException e) {
+                // Manejo de excepciones al cerrar el InputStream
+            }
+        }
     }
+}
+
+public void otroMetodo(InputStream is) {
+    // Usar el InputStream aquí
 }
