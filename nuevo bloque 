@@ -1,27 +1,22 @@
-public InputStream getInputStream() throws IOException {
-    return new ClasspathResource(pdfPath.toString()).getInputStream();
-}
-
-public void usarInputStream() {
-    InputStream is = null;
-    try {
-        is = getInputStream();
-        // Pasar el InputStream a otro método para su uso
-        otroMetodo(is);
-    } catch (IOException e) {
-        // Manejo de excepciones
-    } finally {
-        // Aquí puedes cerrar el InputStream cuando ya no se necesite
-        if (is != null) {
-            try {
-                is.close();
-            } catch (IOException e) {
-                // Manejo de excepciones al cerrar el InputStream
+public void generarPdf(List<Item> items) {
+    for (Item item : items) {
+        // Usamos try-with-resources para asegurar que el InputStream se cierre correctamente
+        try (InputStream is = getPdftemplate(item.name)) {
+            // Llamamos al switch para procesar el InputStream
+            switch (item.getTipoDecaimiento()) {
+                case TIPO_1:
+                    // Crear el objeto para TIPO_1
+                    procesarTipo1(is);
+                    break;
+                case TIPO_2:
+                    // Crear el objeto para TIPO_2
+                    procesarTipo2(is);
+                    break;
+                // Otros casos según el tipo de decaimiento
             }
+        } catch (IOException e) {
+            // Manejar la excepción de forma adecuada
+            e.printStackTrace();
         }
     }
-}
-
-public void otroMetodo(InputStream is) {
-    // Usar el InputStream aquí
 }
