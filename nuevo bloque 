@@ -1,29 +1,9 @@
-public class InputStreamWrapper implements AutoCloseable {
-    private final InputStream is;
-
-    public InputStreamWrapper(String path) throws IOException {
-        this.is = new ClasspathResource(path).getInputStream();
-    }
-
-    public InputStream getInputStream() {
-        return is;
-    }
-
-    @Override
-    public void close() throws IOException {
-        if (is != null) {
-            is.close();
-        }
-    }
-}
-
-public InputStreamWrapper getInputStreamWrapper() throws IOException {
-    return new InputStreamWrapper(pdfPath.toString());
+public InputStream getInputStream() throws IOException {
+    return new ClasspathResource(pdfPath.toString()).getInputStream();
 }
 
 public void usarInputStream() {
-    try (InputStreamWrapper wrapper = getInputStreamWrapper()) {
-        InputStream is = wrapper.getInputStream();
+    try (InputStream is = getInputStream()) {
         // Usa el InputStream aquí
     } catch (IOException e) {
         // Maneja excepciones
