@@ -1,13 +1,32 @@
 <configuration>
 
-    <appender name="Console" class="ch.qos.logback.core.ConsoleAppender">
+    <!-- Appender con el primer patrón -->
+    <appender name="ConsolePattern1" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>{ "siem": "%X{siem}, "level": "%level", "logger": "%logger{36}", "message": "%msg" }</pattern>
+            <pattern>{ "template1": "%X{siem}, "level": "%level", "logger": "%logger{36}", "message": "%msg" }</pattern>
         </encoder>
     </appender>
 
+    <!-- Appender con el segundo patrón -->
+    <appender name="ConsolePattern2" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>{ "template2": "%X{siem}, "level": "%level", "logger": "%logger{36}", "message": "%msg" }</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Logger usando el primer appender con patrón1 -->
+    <logger name="com.mipackage.template1" level="INFO">
+        <appender-ref ref="ConsolePattern1"/>
+    </logger>
+
+    <!-- Logger usando el segundo appender con patrón2 -->
+    <logger name="com.mipackage.template2" level="INFO">
+        <appender-ref ref="ConsolePattern2"/>
+    </logger>
+
+    <!-- Logger raíz (default) con patrón1 -->
     <root level="INFO">
-        <appender-ref ref="Console"/>
+        <appender-ref ref="ConsolePattern1"/>
     </root>
 
 </configuration>
