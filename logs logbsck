@@ -1,0 +1,14 @@
+<configuration>
+
+    <!-- Otros appenders y configuraciones -->
+
+    <!-- Omitir logs de Redis (ajustar el nombre del logger según el cliente) -->
+    <logger name="org.apache.commons.pool2.impl.GenericObjectPool" level="OFF" />
+
+    <!-- Omitir logs adicionales relacionados con Redis si es necesario -->
+    <logger name="redis.clients.jedis" level="OFF" />
+    <logger name="io.lettuce.core" level="OFF" />
+    
+    <!-- Otras configuraciones de loggers -->
+
+</configuration>
