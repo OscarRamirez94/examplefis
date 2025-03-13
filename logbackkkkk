@@ -1,33 +1,27 @@
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
 public class MiClase {
 
+    private static final Logger log = LoggerFactory.getLogger(MiClase.class);
+
     public void metodoConLogModificado() {
-        // Cambiar el patrón solo para este método
-        modificarLogbackPattern("%d{yyyy-MM-dd HH:mm:ss} - %level - %msg%n");
+        // Establecer el valor de "siem" en el MDC
+        MDC.put("siem", "valor_dinamico");
 
-        // Llamada al código donde los logs tendrán el nuevo patrón
-        log.info("Este es un log con patrón modificado");
+        // Ahora el log usará el valor dinámico de "siem" en el patrón definido
+        log.info("Este es un log con el valor de siem modificado");
 
-        // Resto del código
+        // Realizar otras acciones en el método
+        // ...
+
+        // Limpiar el valor de "siem" después de que termine el método
+        MDC.remove("siem");
     }
 
     public void metodoNormal() {
-        // Este método usará el patrón configurado originalmente
-        log.info("Este es un log con el patrón original");
-    }
-
-    private void modificarLogbackPattern(String nuevoPatron) {
-        // Obtener el contexto de logback
-        LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
-
-        // Obtener el appender de consola
-        ConsoleAppender appender = (ConsoleAppender) context.getLogger("ROOT").getAppender("Console");
-
-        // Cambiar el patrón del appender
-        PatternLayoutEncoder encoder = (PatternLayoutEncoder) appender.getEncoder();
-        encoder.setPattern(nuevoPatron);
-        encoder.start();
+        // Este método usará el valor de "siem" configurado en el MDC (si se ha establecido anteriormente)
+        log.info("Este es un log normal sin valor modificado para siem");
     }
 }
