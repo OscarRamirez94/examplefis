@@ -1,27 +1,13 @@
-import org.slf4j.MDC;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+<configuration>
 
-public class MiClase {
+    <appender name="Console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>{ "siem": "%X{siem}, "level": "%level", "logger": "%logger{36}", "message": "%msg" }</pattern>
+        </encoder>
+    </appender>
 
-    private static final Logger log = LoggerFactory.getLogger(MiClase.class);
+    <root level="INFO">
+        <appender-ref ref="Console"/>
+    </root>
 
-    public void metodoConLogModificado() {
-        // Establecer el valor de "siem" en el MDC
-        MDC.put("siem", "valor_dinamico");
-
-        // Ahora el log usará el valor dinámico de "siem" en el patrón definido
-        log.info("Este es un log con el valor de siem modificado");
-
-        // Realizar otras acciones en el método
-        // ...
-
-        // Limpiar el valor de "siem" después de que termine el método
-        MDC.remove("siem");
-    }
-
-    public void metodoNormal() {
-        // Este método usará el valor de "siem" configurado en el MDC (si se ha establecido anteriormente)
-        log.info("Este es un log normal sin valor modificado para siem");
-    }
-}
+</configuration>
