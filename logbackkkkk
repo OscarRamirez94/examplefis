@@ -1,32 +1,37 @@
-<configuration>
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
-    <!-- Appender con el primer patrón -->
-    <appender name="ConsolePattern1" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <pattern>{ "template1": "%X{siem}, "level": "%level", "logger": "%logger{36}", "message": "%msg" }</pattern>
-        </encoder>
-    </appender>
+public class MiClase {
 
-    <!-- Appender con el segundo patrón -->
-    <appender name="ConsolePattern2" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <pattern>{ "template2": "%X{siem}, "level": "%level", "logger": "%logger{36}", "message": "%msg" }</pattern>
-        </encoder>
-    </appender>
+    private static final Logger loggerTemplate1 = LoggerFactory.getLogger("com.mipackage.template1");
+    private static final Logger loggerTemplate2 = LoggerFactory.getLogger("com.mipackage.template2");
 
-    <!-- Logger usando el primer appender con patrón1 -->
-    <logger name="com.mipackage.template1" level="INFO">
-        <appender-ref ref="ConsolePattern1"/>
-    </logger>
+    public void metodoA() {
+        // Establecer el valor de 'siem' a 'false' en MDC
+        MDC.put("siem", "false");
 
-    <!-- Logger usando el segundo appender con patrón2 -->
-    <logger name="com.mipackage.template2" level="INFO">
-        <appender-ref ref="ConsolePattern2"/>
-    </logger>
+        // Usar logger con el patrón template1
+        loggerTemplate1.info("Este es un log con siem=false");
 
-    <!-- Logger raíz (default) con patrón1 -->
-    <root level="INFO">
-        <appender-ref ref="ConsolePattern1"/>
-    </root>
+        // Limpiar el MDC
+        MDC.remove("siem");
+    }
 
-</configuration>
+    public void metodoB() {
+        // Establecer el valor de 'siem' a 'true' en MDC
+        MDC.put("siem", "true");
+
+        // Usar logger con el patrón template2
+        loggerTemplate2.info("Este es un log con siem=true");
+
+        // Limpiar el MDC
+        MDC.remove("siem");
+    }
+
+    public static void main(String[] args) {
+        MiClase miClase = new MiClase();
+        miClase.metodoA();  // Log con patrón template1
+        miClase.metodoB();  // Log con patrón template2
+    }
+}
