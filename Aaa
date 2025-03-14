@@ -10,23 +10,27 @@ public class CustomGatewayFilter implements WebFilter {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        return exchange.getResponse().setComplete()  // Asegura que la respuesta está completa y no continúa
-            .then(
-                // Simulamos que hacemos un WebClient y procesamos la respuesta
-                someWebClientRequest()
-                    .flatMap(responseBody -> {
-                        if (responseBody.contains("001")) {
-                            // Regresamos Mono.error() para emitir un error y no continuar con el flujo
-                            exchange.getResponse().setStatusCode(HttpStatus.BAD_REQUEST); // Opcional: establece un código de estado de error
-                            return Mono.error(new RuntimeException("Código de error 001 encontrado"));
-                        }
-                        return chain.filter(exchange);  // Si no hay error, continúa el siguiente filtro
-                    })
-            );
+        return someWebClientRequest()
+            .flatMap(responseBody -> {
+                if (responseBody.contains("001")) {
+                    // Establecemos el código de estado de la respuesta HTTP antes de emitir el error
+                    exchange.getResponse().setStatusCode(HttpStatus.BAD_REQUEST);  // Establecemos un código de estado 400
+                    exchange.getResponse().getHeaders().add("X-Error-Code", "001");  // Agregamos encabezados personalizados
+
+                    // Aquí podríamos agregar un cuerpo de error personalizado
+                    String errorMessage = "Código de error 001 encontrado en la respuesta";
+                    exchange.getResponse().writeWith(Mono.just(exchange.getResponse()
+                        .bufferFactory().wrap(errorMessage.getBytes())));  // Escribimos el mensaje de error en el cuerpo de la respuesta
+
+                    // Finalmente, emitimos el error con Mono.error(), lo que detiene el flujo de procesamiento
+                    return Mono.error(new RuntimeException(errorMessage));
+                }
+                return chain.filter(exchange);  // Si no hay error, continua con el siguiente filtro
+            });
     }
 
     private Mono<String> someWebClientRequest() {
-        // Simula un WebClient
-        return Mono.just("response with code 001");  // Aquí generas una respuesta con el código "001"
+        // Simula una solicitud WebClient
+        return Mono.just("response with code 001");  // Respuesta simulada con el código "001"
     }
 }
