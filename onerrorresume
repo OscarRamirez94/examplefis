@@ -1,0 +1,35 @@
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.server.WebFilterChain;
+import org.springframework.http.HttpStatus;
+import reactor.core.publisher.Mono;
+
+public class MiFiltro implements WebFilter {
+
+    private final WebClient webClient;
+
+    public MiFiltro(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.baseUrl("http://mi-servicio.com").build();
+    }
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        // Aquí puedes hacer el consumo del servicio
+        return webClient.get()
+                .uri("/endpoint")
+                .retrieve()
+                .bodyToMono(String.class)
+                .onErrorResume(WebClientRequestException.class, e -> {
+                    if (e.getMessage().contains("Connection refused")) {
+                        // Maneja el error cuando la conexión es rechazada (Servicio no disponible)
+                        // Se puede devolver una respuesta alternativa o continuar el flujo
+                        exchange.getResponse().setStatusCode(HttpStatus.SERVICE_UNAVAILABLE); // 503
+                        return Mono.empty();  // Respuesta vacía o alternativa
+                    }
+                    return Mono.error(e);  // Si es otro tipo de error, lo lanzamos nuevamente
+                })
+                .then(chain.filter(exchange));  // Continuar con el filtro normal
+    }
+}
