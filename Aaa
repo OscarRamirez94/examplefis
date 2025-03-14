@@ -18,7 +18,6 @@ public class CustomGatewayFilter implements GatewayFilter {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-
         // Realizar la llamada WebClient
         return webClient.get()
                 .uri("/api/check-status")  // Ajusta la ruta de la API
@@ -54,7 +53,9 @@ public class CustomGatewayFilter implements GatewayFilter {
 
         // Crear una nueva respuesta para enviar al cliente
         String newBody = "Respuesta personalizada debido al código 001";
+
+        // Escribir la respuesta modificada y finalizar el proceso sin continuar los filtros posteriores
         return response.writeWith(Mono.just(response.bufferFactory().wrap(newBody.getBytes())))
-                .then(Mono.empty()); // Terminamos aquí para evitar que se ejecuten los siguientes filtros
+                .then();  // Aquí, no necesitamos `Mono.empty()`; con `then()` simplemente finalizamos la ejecución
     }
 }
