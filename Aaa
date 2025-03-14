@@ -1,36 +1,68 @@
-import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.server.WebFilter;
-import org.springframework.web.server.WebFilterChain;
-import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
+import org.springframework.cloud.gateway.filter.GatewayFilter;
+import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferFactory;
+import reactor.core.publisher.Mono;
+import org.springframework.stereotype.Component;
 
 @Component
-public class CustomGatewayFilter implements WebFilter {
+public class CustomGatewayFilter extends AbstractGatewayFilterFactory<CustomGatewayFilter.Config> {
 
-    @Override
-    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        return someWebClientRequest()
-            .flatMap(responseBody -> {
-                if (responseBody.contains("001")) {
-                    // Establecemos el código de estado de la respuesta HTTP antes de emitir el error
-                    exchange.getResponse().setStatusCode(HttpStatus.BAD_REQUEST);  // Establecemos un código de estado 400
-                    exchange.getResponse().getHeaders().add("X-Error-Code", "001");  // Agregamos encabezados personalizados
-
-                    // Aquí podríamos agregar un cuerpo de error personalizado
-                    String errorMessage = "Código de error 001 encontrado en la respuesta";
-                    exchange.getResponse().writeWith(Mono.just(exchange.getResponse()
-                        .bufferFactory().wrap(errorMessage.getBytes())));  // Escribimos el mensaje de error en el cuerpo de la respuesta
-
-                    // Finalmente, emitimos el error con Mono.error(), lo que detiene el flujo de procesamiento
-                    return Mono.error(new RuntimeException(errorMessage));
-                }
-                return chain.filter(exchange);  // Si no hay error, continua con el siguiente filtro
-            });
+    public static class Config {
+        // Aquí puedes agregar configuraciones personalizadas si es necesario
     }
 
-    private Mono<String> someWebClientRequest() {
-        // Simula una solicitud WebClient
-        return Mono.just("response with code 001");  // Respuesta simulada con el código "001"
+    public CustomGatewayFilter() {
+        super(Config.class);
+    }
+
+    @Override
+    public GatewayFilter apply(Config config) {
+        return (ServerWebExchange exchange, GatewayFilterChain chain) -> {
+
+            // Continuamos con la cadena de filtros y nos aseguramos de intervenir en la respuesta
+            return chain.filter(exchange).doOnTerminate(() -> {
+                ServerHttpResponse response = exchange.getResponse();
+
+                // Verificar si el código de estado es 200 OK (Puedes adaptarlo si lo necesitas)
+                if (response.getStatusCode().equals(HttpStatus.OK)) {
+                    // Puedes modificar el encabezado o cualquier otra parte de la respuesta si es necesario
+                    response.getHeaders().set("Custom-Header", "Changed");  // Ejemplo de modificación del encabezado
+                }
+
+                // Aquí estamos verificando un código de error personalizado (por ejemplo, código '001' en los encabezados)
+                String responseCode = exchange.getRequest().getHeaders().getFirst("Response-Code");
+
+                if ("001".equals(responseCode)) {
+                    // Modificar el cuerpo de la respuesta para el código 001
+                    DataBufferFactory bufferFactory = response.bufferFactory();
+                    String newBody = "Este es el nuevo cuerpo para el código 001";
+                    DataBuffer buffer = bufferFactory.wrap(newBody.getBytes());
+
+                    // Cambiar el cuerpo de la respuesta
+                    response.setStatusCode(HttpStatus.BAD_REQUEST);  // Puedes poner el código de estado que prefieras
+                    response.getHeaders().set("Content-Type", "text/plain"); // Cambiar el tipo de contenido si lo deseas
+
+                    // Escribir la respuesta modificada
+                    response.writeWith(Mono.just(buffer));
+
+                    // Detener la ejecución de los filtros posteriores y evitar el flujo hacia el cliente
+                    // En este caso, devolvemos un error para evitar que se ejecuten filtros adicionales
+                    chain.filter(exchange).then(Mono.error(new CustomException("Error: Código 001 recibido")));
+
+                }
+            });
+        };
+    }
+
+    // Excepción personalizada para lanzar en caso de que se encuentre un código 001
+    public static class CustomException extends RuntimeException {
+        public CustomException(String message) {
+            super(message);
+        }
     }
 }
