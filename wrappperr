@@ -1,0 +1,75 @@
+import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferFactory;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+public class ServerHttpResponseWrapper implements ServerHttpResponse {
+
+    private final ServerHttpResponse delegate;
+    private final DataBufferFactory bufferFactory;
+    private Flux<DataBuffer> body;
+
+    public ServerHttpResponseWrapper(ServerHttpResponse delegate, DataBufferFactory bufferFactory) {
+        this.delegate = delegate;
+        this.bufferFactory = bufferFactory;
+    }
+
+    @Override
+    public Flux<DataBuffer> getBody() {
+        return body;
+    }
+
+    @Override
+    public Mono<Void> writeWith(Flux<? extends DataBuffer> body) {
+        this.body = body;
+        return delegate.writeWith(body);
+    }
+
+    @Override
+    public Mono<Void> writeAndFlushWith(Flux<? extends Publisher<? extends DataBuffer>> body) {
+        return delegate.writeAndFlushWith(body);
+    }
+
+    @Override
+    public HttpStatus getStatusCode() {
+        return delegate.getStatusCode();
+    }
+
+    @Override
+    public void setStatusCode(HttpStatus status) {
+        delegate.setStatusCode(status);
+    }
+
+    @Override
+    public int getRawStatusCode() {
+        return delegate.getRawStatusCode();
+    }
+
+    @Override
+    public void setRawStatusCode(int statusCode) {
+        delegate.setRawStatusCode(statusCode);
+    }
+
+    @Override
+    public void addCookie(ResponseCookie cookie) {
+        delegate.addCookie(cookie);
+    }
+
+    @Override
+    public List<ResponseCookie> getCookies() {
+        return delegate.getCookies();
+    }
+
+    @Override
+    public void beforeCommit(Supplier<? extends Mono<Void>> action) {
+        delegate.beforeCommit(action);
+    }
+
+    @Override
+    public DataBufferFactory bufferFactory() {
+        return delegate.bufferFactory();
+    }
+
+    @Override
+    public boolean isCommitted
