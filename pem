@@ -3,3 +3,7 @@ openssl x509 -in mi_cert.crt -out mi_cert.pem -outform PEM
 
 
 -Djavax.net.ssl.trustStoreType=PEM -Djavax.net.ssl.trustStore=/ruta/mi_cert.pem
+
+
+
+-Djavax.net.ssl.trustStore=C:\ruta\mi_keystore.jks -Djavax.net.ssl.trustStorePassword=changeit
