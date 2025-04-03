@@ -1,0 +1,1 @@
+keytool -importcert -trustcacerts -keystore "C:\Program Files\Eclipse Adoptium\jdk-17\lib\security\cacerts" -storepass changeit -file "C:\certificados\mi_cert.pem" -alias "mi_cert"
