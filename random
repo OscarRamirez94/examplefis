@@ -1,0 +1,33 @@
+import org.springframework.stereotype.Service;
+import java.util.List;
+import java.util.Random;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+@Service
+public class PersonaService {
+
+    private List<Persona> personas;
+
+    public PersonaService() {
+        this.personas = generarMock();
+    }
+
+    private List<Persona> generarMock() {
+        String[] nombres = {"Juan", "Ana", "Pedro", "Lucia", "Carlos"};
+        String[] ciudades = {"Madrid", "Lima", "Bogotá", "Quito", "Buenos Aires"};
+        Random random = new Random();
+
+        return IntStream.range(0, 10_000)
+                .mapToObj(i -> Persona.builder()
+                        .nombre(nombres[random.nextInt(nombres.length)])
+                        .correo("persona" + i + "@mail.com")
+                        .ciudad(ciudades[random.nextInt(ciudades.length)])
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    public List<Persona> obtenerPersonas() {
+        return personas;
+    }
+}
