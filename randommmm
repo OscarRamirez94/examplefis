@@ -1,0 +1,23 @@
+import org.springframework.stereotype.Service;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+@Service
+public class AccountDataService {
+
+    public List<AccountData> generarDatos() {
+        LocalDate today = LocalDate.now();
+        List<LocalDate> possibleDates = Arrays.asList(today.minusDays(3), today.minusDays(6));
+        Random random = new Random();
+
+        return IntStream.rangeClosed(1, 10_000)
+                .mapToObj(i -> new AccountData(
+                        "I", // cif
+                        "I", // account
+                        possibleDates.get(random.nextInt(2)) // fecha aleatoria
+                ))
+                .collect(Collectors.toList());
+    }
+}
