@@ -1,0 +1,15 @@
+import org.springframework.stereotype.Service;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class AccountDataService {
+
+    public List<AccountData> filtrarPorStatusYFecha(List<AccountData> lista, String status, LocalDate fechaInicio, LocalDate fechaFin) {
+        return lista.stream()
+                .filter(dato -> dato.getStatus().equalsIgnoreCase(status))
+                .filter(dato -> !dato.getFecha().isBefore(fechaInicio) && !dato.getFecha().isAfter(fechaFin))
+                .collect(Collectors.toList());
+    }
+}
