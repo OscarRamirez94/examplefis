@@ -1,0 +1,32 @@
+@Service
+public class RegistroService {
+
+    private final List<Registro> registrosMock;
+
+    public RegistroService() {
+        this.registrosMock = generarMock();
+    }
+
+    private List<Registro> generarMock() {
+        List<Registro> registros = new ArrayList<>();
+        for (int i = 1; i <= 10000; i++) {
+            registros.add(new Registro(
+                String.valueOf(i),
+                (i % 2 == 0) ? "ACTIVO" : "INACTIVO",
+                (i % 3 == 0) ? "TIPO_A" : "TIPO_B",
+                LocalDate.now().minusDays(i % 30)
+            ));
+        }
+        return registros;
+    }
+
+    public Flux<Registro> obtenerRegistros(String estatus, String tipo, LocalDate fechaInicio, LocalDate fechaFin, int page, int size) {
+        return Flux.fromIterable(registrosMock)
+            .filter(r -> estatus == null || r.getEstatus().equalsIgnoreCase(estatus))
+            .filter(r -> tipo == null || r.getTipo().equalsIgnoreCase(tipo))
+            .filter(r -> (fechaInicio == null || !r.getFecha().isBefore(fechaInicio)))
+            .filter(r -> (fechaFin == null || !r.getFecha().isAfter(fechaFin)))
+            .skip((long) page * size)
+            .take(size);
+    }
+}
