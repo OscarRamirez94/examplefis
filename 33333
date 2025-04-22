@@ -9,3 +9,15 @@ public class WebConfig implements WebMvcConfigurer {
         converters.add(new MappingJackson2HttpMessageConverter(objectMapper));
     }
 }
+
+
+aaaa
+
+
+@Bean
+public Jackson2ObjectMapperBuilderCustomizer jsonCustomizer() {
+    return builder -> {
+        builder.modules(new JavaTimeModule());
+        builder.featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    };
+}
