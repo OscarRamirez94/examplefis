@@ -13,3 +13,17 @@ public class AccountDataService {
                 .collect(Collectors.toList());
     }
 }
+
+
+--‐- z z z z z z
+
+LocalDate fechaReferencia = LocalDate.now();  // o la fecha que te indiquen
+int diasAntes = 3;
+int diasDespues = 0;
+
+.stream()
+    .filter(dato -> {
+        LocalDate fechaDato = dato.getFecha();
+        return !fechaDato.isBefore(fechaReferencia.minusDays(diasAntes)) &&
+               !fechaDato.isAfter(fechaReferencia.plusDays(diasDespues));
+    })
