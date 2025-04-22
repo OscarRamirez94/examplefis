@@ -8,12 +8,11 @@ public class JacksonConfig {
 
     @Bean
     public Jackson2ObjectMapperBuilderCustomizer jsonCustomizer() {
-        return builder -> builder.modules(new JavaTimeModule());
-    }
-}
+        return builder -> builder.modules(new 
 
 
-
-
-spring.jackson.date-format=yyyy-MM-dd
-spring.jackson.serialization.WRITE_DATES_AS_TIMESTAMPS=false
+spring:
+  jackson:
+    date-format: yyyy-MM-dd
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
