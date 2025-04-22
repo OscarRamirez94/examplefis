@@ -1,0 +1,11 @@
+@Autowired
+private WebClient webClient;
+
+public Mono<List<Dto>> obtenerCreditos(CreditDto request) {
+    return webClient.post()
+            .uri("http://servicio-externo/api/creditos")
+            .bodyValue(request)
+            .retrieve()
+            .bodyToFlux(Dto.class)
+            .collectList();
+}
