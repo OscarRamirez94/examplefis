@@ -1,23 +1,25 @@
-@Configuration
-public class WebConfig implements WebMvcConfigurer {
+import java.time.LocalDate;
+import java.util.List;
+import java.util.stream.Collectors;
 
-    @Override
-    public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        converters.add(new MappingJackson2HttpMessageConverter(objectMapper));
+public class FiltroFechas {
+
+    record Evento(String nombre, LocalDate fecha) {}
+
+    public static void main(String[] args) {
+        List<Evento> eventos = List.of(
+            new Evento("Evento A", LocalDate.of(2025, 4, 20)),
+            new Evento("Evento B", LocalDate.of(2025, 4, 22)),
+            new Evento("Evento C", LocalDate.of(2025, 5, 1))
+        );
+
+        LocalDate startDate = LocalDate.of(2025, 4, 21);
+        LocalDate endDate = LocalDate.of(2025, 4, 30);
+
+        List<Evento> filtrados = eventos.stream()
+            .filter(e -> !e.fecha().isBefore(startDate) && !e.fecha().isAfter(endDate))
+            .collect(Collectors.toList());
+
+        filtrados.forEach(e -> System.out.println(e.nombre() + " - " + e.fecha()));
     }
-}
-
-
-aaaa
-
-
-@Bean
-public Jackson2ObjectMapperBuilderCustomizer jsonCustomizer() {
-    return builder -> {
-        builder.modules(new JavaTimeModule());
-        builder.featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-    };
 }
