@@ -1,0 +1,6 @@
+@PostMapping("/credits")
+public Mono<ResponseEntity<BffResponse<List<Dto>, Void>>> credit(@RequestBody CreditDto request) {
+    return service.getCredits(request)
+            .map(ResponseEntity::ok)
+            .defaultIfEmpty(ResponseEntity.noContent().build());
+}
