@@ -1,0 +1,31 @@
+package com.tu.paquete.service;
+
+import com.tu.paquete.model.BffResponse;
+import com.tu.paquete.model.CreditDto;
+import com.tu.paquete.model.Dto;
+import com.tu.paquete.service.impl.CreditServiceImpl;
+import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+
+import java.util.List;
+
+class CreditServiceTest {
+
+    private final CreditService service = new CreditServiceImpl();
+
+    @Test
+    void getCredits_shouldReturnResponse() {
+        CreditDto request = new CreditDto();
+        request.setCliente("Carlos");
+
+        Mono<BffResponse<List<Dto>, Void>> result = service.getCredits(request);
+
+        StepVerifier.create(result)
+                .assertNext(response -> {
+                    assert response.getData() != null;
+                    assert response.getData().get(0).getNombre().equals("Crédito de Carlos");
+                })
+                .verifyComplete();
+    }
+}
