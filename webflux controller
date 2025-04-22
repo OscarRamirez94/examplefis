@@ -4,3 +4,6 @@ public Mono<ResponseEntity<BffResponse<List<Dto>, Void>>> credit(@RequestBody Cr
             .map(ResponseEntity::ok)
             .defaultIfEmpty(ResponseEntity.noContent().build());
 }
+
+implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
