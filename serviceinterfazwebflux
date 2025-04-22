@@ -1,0 +1,13 @@
+package com.tu.paquete.service;
+
+import com.tu.paquete.model.BffResponse;
+import com.tu.paquete.model.CreditDto;
+import com.tu.paquete.model.Dto;
+import reactor.core.publisher.Mono;
+
+import java.util.List;
+
+public interface CreditService {
+
+    Mono<BffResponse<List<Dto>, Void>> getCredits(CreditDto request);
+}
