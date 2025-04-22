@@ -1,0 +1,9 @@
+public Mono<List<Dto>> obtenerCreditos(CreditDto request) {
+    List<Dto> mockList = new ArrayList<>();
+    for (int i = 0; i < 10000; i++) {
+        Dto dto = new Dto();
+        dto.setNombre("Crédito " + i);
+        mockList.add(dto);
+    }
+    return Mono.just(mockList);
+}
