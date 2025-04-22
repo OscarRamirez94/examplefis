@@ -1,0 +1,26 @@
+package com.tu.paquete.service.impl;
+
+import com.tu.paquete.model.BffResponse;
+import com.tu.paquete.model.CreditDto;
+import com.tu.paquete.model.Dto;
+import com.tu.paquete.service.CreditService;
+import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
+
+import java.util.List;
+
+@Service
+public class CreditServiceImpl implements CreditService {
+
+    @Override
+    public Mono<BffResponse<List<Dto>, Void>> getCredits(CreditDto request) {
+        Dto dto = new Dto();
+        dto.setNombre("Crédito de " + request.getCliente());
+
+        BffResponse<List<Dto>, Void> response = new BffResponse<>();
+        response.setData(List.of(dto));
+        response.setMetadata(null);
+
+        return Mono.just(response);
+    }
+}
