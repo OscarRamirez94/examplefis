@@ -9,3 +9,12 @@ public Mono<List<Dto>> obtenerCreditos(CreditDto request) {
             .bodyToFlux(Dto.class)
             .collectList();
 }
+
+
+public Mono<BffResponse<List<Dto>, Void>> obtenerCreditos(CreditDto request) {
+    return webClient.post()
+            .uri("http://servicio-externo/api/creditos")
+            .bodyValue(request)
+            .retrieve()
+            .bodyToMono(new ParameterizedTypeReference<BffResponse<List<Dto>, Void>>() {});
+}
