@@ -1,0 +1,6 @@
+@Override
+public Flux<OrderDTO> getApprovedOrders() {
+    List<OrderDTO> ordersFromService = externalService.getOrders();
+    return Flux.fromIterable(ordersFromService)
+               .filter(order -> "APPROVED".equals(order.getStatus()));
+}
