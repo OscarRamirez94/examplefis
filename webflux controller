@@ -1,3 +1,36 @@
+
+import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+
+public class CreditProductServiceTest {
+
+    private final CreditProductService creditProductService = new CreditProductService(); // o un mock si lo necesitas
+
+    @Test
+    void testServicioRetornaRespuestaCorrecta() {
+        Mono<CreditProductResponse<CreditProduct>> resultado = creditProductService.obtenerProductoCredito();
+
+        StepVerifier.create(resultado)
+                .expectNextMatches(response ->
+                        response != null &&
+                        response.getData() != null &&
+                        !response.getData().isEmpty() &&
+                        "1".equals(response.getData().get(0).getCode())
+                )
+                .verifyComplete();
+    }
+}
+
+
+
+
+
+
+
+
+
+
 @WebFluxTest(CreditProductController.class)
 class CreditProductControllerWebTest {
 
