@@ -84,4 +84,17 @@ public Mono<PagedResponse<CreditDTO>> getPagedCredits(
             return new PagedResponse<>(page, nextCursor, moreRecords);
         });
 }
+zzzzzzzz
 
+public Mono<PagedResponse<CreditDTO>> getPagedCredits(
+        Integer cursor,
+        Integer limit,
+        String status,
+        String tipo
+) {
+    Flux<CreditDTO> filteredFlux = getMockCredits()
+        .filter(dto -> status == null || dto.getStatus().equalsIgnoreCase(status))
+        .filter(dto -> tipo == null || dto.getTipo().equalsIgnoreCase(tipo));
+
+    return PaginationUtils.paginate(filteredFlux, cursor, limit);
+}
