@@ -19,4 +19,11 @@ public class PagedResponse<T> {
     private boolean moreRecords;
 
     // constructor, getters, setters
+
+
+........
+public Flux<CreditDTO> getCreditsFiltered(String tipo, String status) {
+    return getMockCredits()
+        .filter(dto -> tipo == null || dto.getTipo().equals(tipo))
+        .filter(dto -> status == null || dto.getStatus().equals(status));
 }
