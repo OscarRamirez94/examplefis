@@ -10,3 +10,13 @@ public Mono<PagedResponse<CreditDTO>> getCreditsPaged(Integer cursor, Integer li
         new PagedResponse<>(page, nextCursor, moreRecords)
     );
 }
+
+,,,,,,,
+
+public class PagedResponse<T> {
+    private List<T> data;
+    private Integer nextCursor;
+    private boolean moreRecords;
+
+    // constructor, getters, setters
+}
