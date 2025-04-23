@@ -1,0 +1,99 @@
+@RestController
+@RequestMapping("/api/items")
+public class ItemController {
+
+    private final ItemService itemService;
+
+    public ItemController(ItemService itemService) {
+        this.itemService = itemService;
+    }
+
+    @GetMapping
+    public Flux<Item> getAllItems() {
+        return itemService.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public Mono<ResponseEntity<Item>> getItemById(@PathVariable String id) {
+        return itemService.findById(id)
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+}
+
+
+
+@RestController
+@RequestMapping("/api/items")
+public class ItemController {
+
+    private final ItemService itemService;
+
+    public ItemController(ItemService itemService) {
+        this.itemService = itemService;
+    }
+
+    @GetMapping
+    public Flux<Item> getAllItems() {
+        return itemService.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public Mono<ResponseEntity<Item>> getItemById(@PathVariable String id) {
+        return itemService.findById(id)
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+}
+
+
+
+@WebFluxTest(ItemController.class)
+class ItemControllerTest {
+
+    @Autowired
+    private WebTestClient webTestClient;
+
+    @MockBean
+    private ItemService itemService;
+
+    @Test
+    void getAllItems_ReturnsListOfItems() {
+        List<Item> mockItems = List.of(new Item("1", "Item 1"), new Item("2", "Item 2"));
+        when(itemService.findAll()).thenReturn(Flux.fromIterable(mockItems));
+
+        webTestClient.get()
+                .uri("/api/items")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(Item.class)
+                .hasSize(2)
+                .contains(mockItems.get(0), mockItems.get(1));
+    }
+
+    @Test
+    void getItemById_ReturnsItem_WhenFound() {
+        Item mockItem = new Item("1", "Item 1");
+        when(itemService.findById("1")).thenReturn(Mono.just(mockItem));
+
+        webTestClient.get()
+                .uri("/api/items/1")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(Item.class)
+                .isEqualTo(mockItem);
+    }
+
+    @Test
+    void getItemById_ReturnsNotFound_WhenMissing() {
+        when(itemService.findById("999")).thenReturn(Mono.empty());
+
+        webTestClient.get()
+                .uri("/api/items/999")
+                .exchange()
+                .expectStatus().isNotFound();
+    }
+}
+
+
+
