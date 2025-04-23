@@ -37,3 +37,14 @@ webTestClient.get()
         assertThat(body).isNotNull();
         assertThat(body.getData().getId()).isEqualTo("123"); // según tu clase
     });
+
+
+
+webTestClient.get()
+    .uri(uriBuilder -> uriBuilder
+        .path("/api/credit-products")
+        .queryParam("status", "ACTIVE")
+        .build())
+    .header("Authorization", "Bearer tu-token")
+    .accept(MediaType.APPLICATION_JSON)
+    .exchange()
