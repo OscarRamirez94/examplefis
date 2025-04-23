@@ -27,3 +27,22 @@ public Flux<CreditDTO> getCreditsFiltered(String tipo, String status) {
         .filter(dto -> tipo == null || dto.getTipo().equals(tipo))
         .filter(dto -> status == null || dto.getStatus().equals(status));
 }
+
+
+.........
+public class PaginationUtils {
+
+    public static <T> Mono<PagedResponse<T>> paginate(Flux<T> source, Integer cursor, Integer limit) {
+        return source.collectList()
+            .map(fullList -> {
+                int start = (cursor != null) ? cursor : 0;
+                int end = Math.min(start + limit, fullList.size());
+
+                List<T> page = fullList.subList(start, end);
+                boolean moreRecords = end < fullList.size();
+                Integer nextCursor = moreRecords ? end : null;
+
+                return new PagedResponse<>(page, nextCursor, moreRecords);
+            });
+    }
+}
