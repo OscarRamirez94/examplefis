@@ -48,3 +48,15 @@ public class PaginationUtils {
 }
 
 .......
+
+
+@GetMapping("/credits")
+public Mono<ResponseEntity<PagedResponse<CreditDTO>>> getCredits(
+        @RequestParam(required = false) Integer cursor,
+        @RequestParam(defaultValue = "20") Integer limit,
+        @RequestParam(required = false) String status,
+        @RequestParam(required = false) String tipo
+) {
+    return creditService.getPagedCredits(cursor, limit, status, tipo)
+        .map(ResponseEntity::ok);
+}
