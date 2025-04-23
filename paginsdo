@@ -1,0 +1,12 @@
+public Mono<PagedResponse<CreditDTO>> getCreditsPaged(Integer cursor, Integer limit) {
+    int start = (cursor != null) ? cursor : 0;
+    int end = Math.min(start + limit, mockData.size());
+
+    List<CreditDTO> page = mockData.subList(start, end);
+    boolean moreRecords = end < mockData.size();
+    Integer nextCursor = moreRecords ? end : null;
+
+    return Mono.just(
+        new PagedResponse<>(page, nextCursor, moreRecords)
+    );
+}
