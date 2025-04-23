@@ -62,6 +62,26 @@ public Mono<ResponseEntity<PagedResponse<CreditDTO>>> getCredits(
 }
 
 
- ,, ,,
+ 
+public Mono<PagedResponse<CreditDTO>> getPagedCredits(
+        Integer cursor,
+        Integer limit,
+        String status,
+        String tipo
+) {
+    return getMockCredits()
+        .filter(dto -> status == null || dto.getStatus().equalsIgnoreCase(status))
+        .filter(dto -> tipo == null || dto.getTipo().equalsIgnoreCase(tipo))
+        .collectList()
+        .map(filteredList -> {
+            int start = (cursor != null) ? cursor : 0;
+            int end = Math.min(start + limit, filteredList.size());
 
+            List<CreditDTO> page = filteredList.subList(start, end);
+            boolean moreRecords = end < filteredList.size();
+            Integer nextCursor = moreRecords ? end : null;
+
+            return new PagedResponse<>(page, nextCursor, moreRecords);
+        });
+}
 
