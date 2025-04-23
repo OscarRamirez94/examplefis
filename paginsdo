@@ -98,3 +98,26 @@ public Mono<PagedResponse<CreditDTO>> getPagedCredits(
 
     return PaginationUtils.paginate(filteredFlux, cursor, limit);
 }
+
+
+
+
+cursor por pagina 
+
+public class PaginationUtils {
+
+    public static <T> Mono<PagedResponse<T>> paginate(Flux<T> source, Integer cursor, Integer limit) {
+        return source.collectList()
+            .map(fullList -> {
+                int currentPage = (cursor != null) ? cursor : 0;
+                int start = currentPage * limit;
+                int end = Math.min(start + limit, fullList.size());
+
+                List<T> page = (start < fullList.size()) ? fullList.subList(start, end) : List.of();
+                boolean moreRecords = end < fullList.size();
+                Integer nextCursor = moreRecords ? currentPage + 1 : null;
+
+                return new PagedResponse<>(page, nextCursor, moreRecords);
+            });
+    }
+}
