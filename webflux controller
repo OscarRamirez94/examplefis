@@ -7,3 +7,21 @@ public Mono<ResponseEntity<BffResponse<List<Dto>, Void>>> credit(@RequestBody Cr
 
 implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
+
+
+
+@Test
+void getCreditProductById_ReturnsProduct() {
+    var creditProduct = new CREDITPRODUCT(/* set fields */);
+    var response = new CreditProducTRESPOMSE<CREDITPRODUCT>();
+    response.setData(creditProduct); // O como sea que se le asigna
+
+    when(service.getCreditProductById("123")).thenReturn(Mono.just(response));
+
+    webTestClient.get()
+        .uri("/api/credit-products/123")
+        .exchange()
+        .expectStatus().isOk()
+        .expectBody(new ParameterizedTypeReference<CreditProducTRESPOMSE<CREDITPRODUCT>>() {})
+        .isEqualTo(response);
+}
