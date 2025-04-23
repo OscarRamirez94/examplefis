@@ -1,4 +1,4 @@
-@PostMapping("/credits")
+9@PostMapping("/credits")
 public Mono<ResponseEntity<BffResponse<List<Dto>, Void>>> credit(@RequestBody CreditDto request) {
     return service.getCredits(request)
             .map(ResponseEntity::ok)
@@ -25,3 +25,15 @@ void getCreditProductById_ReturnsProduct() {
         .expectBody(new ParameterizedTypeReference<CreditProducTRESPOMSE<CREDITPRODUCT>>() {})
         .isEqualTo(response);
 }
+
+
+webTestClient.get()
+    .uri("/api/credit-products/123")
+    .exchange()
+    .expectStatus().isOk()
+    .expectBody(new ParameterizedTypeReference<CreditProducTRESPOMSE<CREDITPRODUCT>>() {})
+    .consumeWith(response -> {
+        var body = response.getResponseBody();
+        assertThat(body).isNotNull();
+        assertThat(body.getData().getId()).isEqualTo("123"); // según tu clase
+    });
