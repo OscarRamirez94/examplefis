@@ -1,77 +1,38 @@
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.ResponseEntity;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
+@WebFluxTest(CreditProductController.class)
+class CreditProductControllerWebTest {
 
-import java.util.List;
+    @Autowired
+    private WebTestClient webTestClient;
 
-import static org.mockito.Mockito.when;
-
-// Suponiendo que tu modelo y servicios son estos:
-class Product {
-    private String name;
-    public Product(String name) { this.name = name; }
-    public String getName() { return name; }
-}
-
-interface ProductService {
-    Mono<List<Product>> getProducts();
-}
-
-class ProductController {
-    private final ProductService service;
-
-    public ProductController(ProductService service) {
-        this.service = service;
-    }
-
-    public Mono<ResponseEntity<List<Product>>> getProducts() {
-        return service.getProducts()
-            .map(ResponseEntity::ok)
-            .defaultIfEmpty(ResponseEntity.noContent().build());
-    }
-}
-
-@ExtendWith(MockitoExtension.class)
-class ProductControllerTest {
-
-    @Mock
-    private ProductService service;
-
-    @InjectMocks
-    private ProductController controller;
-
-    private List<Product> productList;
-
-    @BeforeEach
-    void setUp() {
-        productList = List.of(new Product("MockProduct"));
-    }
+    @MockBean
+    private CreditProductService service;
 
     @Test
-    void shouldReturnOkWhenProductsExist() {
-        when(service.getProducts()).thenReturn(Mono.just(productList));
+    void shouldReturnOkWithCreditProducts() {
+        CreditProduct creditProduct = new CreditProduct("001", "Tarjeta Oro");
+        CreditProductResponse<CreditProduct> response = new CreditProductResponse<>();
+        response.setData(List.of(creditProduct));
 
-        Mono<ResponseEntity<List<Product>>> result = controller.getProducts();
+        when(service.getProducts()).thenReturn(Mono.just(response));
 
-        StepVerifier.create(result)
-            .expectNext(ResponseEntity.ok(productList))
-            .verifyComplete();
+        webTestClient.get()
+            .uri("/credit-products")
+            .accept(MediaType.APPLICATION_JSON)
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody()
+            .jsonPath("$.data[0].id").isEqualTo("001")
+            .jsonPath("$.data[0].name").isEqualTo("Tarjeta Oro");
     }
 
     @Test
     void shouldReturnNoContentWhenNoProducts() {
         when(service.getProducts()).thenReturn(Mono.empty());
 
-        Mono<ResponseEntity<List<Product>>> result = controller.getProducts();
-
-        StepVerifier.create(result)
-            .expectNext(ResponseEntity.noContent().build())
-            .verifyComplete();
+        webTestClient.get()
+            .uri("/credit-products")
+            .accept(MediaType.APPLICATION_JSON)
+            .exchange()
+            .expectStatus().isNoContent();
     }
 }
