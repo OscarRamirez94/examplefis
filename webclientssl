@@ -91,3 +91,18 @@ logging:
   level:
     reactor.netty.http.client: DEBUG
     org.springframework.web.reactive.function.client: DEBUG
+
+
+
+webClient.post()
+    .uri("/ruta")
+    .bodyValue(dto)
+    .retrieve()
+    .onStatus(HttpStatus::is5xxServerError, clientResponse ->
+        clientResponse.bodyToMono(String.class)
+            .flatMap(errorBody -> {
+                System.out.println("Error 500 recibido del servidor: " + errorBody);
+                return Mono.error(new RuntimeException("Error 500 del servidor: " + errorBody));
+            })
+    )
+    .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
