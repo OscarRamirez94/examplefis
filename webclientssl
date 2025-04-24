@@ -72,3 +72,16 @@ public class MyWebClientServiceImpl implements MyWebClientService {
 
 
 openssl x509 -in tu-cert.crt -text -noout
+
+
+SslContext sslContext = SslContextBuilder.forClient()
+    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+    .build();
+
+HttpClient httpClient = HttpClient.create()
+    .secure(ssl -> ssl.sslContext(sslContext));
+
+WebClient webClient = WebClient.builder()
+    .clientConnector(new ReactorClientHttpConnector(httpClient))
+    .baseUrl("https://el-host-que-sea")
+    .build();
