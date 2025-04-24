@@ -1,0 +1,50 @@
+@Configuration
+public class WebClientConfig {
+
+    @Bean
+    public WebClient secureWebClient() throws Exception {
+        // Carga el truststore generado a partir del .crt
+        KeyStore trustStore = KeyStore.getInstance("JKS");
+        try (InputStream trustStream = new FileInputStream("ruta/a/truststore.jks")) {
+            trustStore.load(trustStream, "123456".toCharArray());
+        }
+
+        TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(
+                TrustManagerFactory.getDefaultAlgorithm());
+        trustManagerFactory.init(trustStore);
+
+        SslContext sslContext = SslContextBuilder.forClient()
+                .trustManager(trustManagerFactory)
+                .build();
+
+        HttpClient httpClient = HttpClient.create()
+                .secure(t -> t.sslContext(sslContext));
+
+        return WebClient.builder()
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .baseUrl("https://tu-api-segura.com")
+                .build();
+    }
+}
+
+
+
+
+@Service
+public class MyWebClientServiceImpl implements MyWebClientService {
+
+    private final WebClient webClient;
+
+    public MyWebClientServiceImpl(@Qualifier("secureWebClient") WebClient webClient) {
+        this.webClient = webClient;
+    }
+
+    @Override
+    public Mono<Map<String, Object>> sendPostRequest(MyRequestDto dto) {
+        return webClient.post()
+                .uri("/ruta")
+                .bodyValue(dto)
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<>() {});
+    }
+}
