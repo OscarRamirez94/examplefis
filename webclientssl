@@ -48,3 +48,24 @@ public class MyWebClientServiceImpl implements MyWebClientService {
                 .bodyToMono(new ParameterizedTypeReference<>() {});
     }
 }
+
+
+
+@Service
+public class MyWebClientServiceImpl implements MyWebClientService {
+
+    private final WebClient webClient;
+
+    public MyWebClientServiceImpl(@Qualifier("secureWebClient") WebClient webClient) {
+        this.webClient = webClient;
+    }
+
+    @Override
+    public Mono<Map<String, Object>> sendPostRequest(MyRequestDto dto) {
+        return webClient.post()
+                .uri("/ruta")
+                .bodyValue(dto)
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<>() {});
+    }
+}
