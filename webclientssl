@@ -69,3 +69,6 @@ public class MyWebClientServiceImpl implements MyWebClientService {
                 .bodyToMono(new ParameterizedTypeReference<>() {});
     }
 }
+
+
+openssl x509 -in tu-cert.crt -text -noout
