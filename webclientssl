@@ -1,4 +1,4 @@
-@Configuration
+7@Configuration
 public class WebClientConfig {
 
     @Bean
@@ -85,3 +85,9 @@ WebClient webClient = WebClient.builder()
     .clientConnector(new ReactorClientHttpConnector(httpClient))
     .baseUrl("https://el-host-que-sea")
     .build();
+
+
+logging:
+  level:
+    reactor.netty.http.client: DEBUG
+    org.springframework.web.reactive.function.client: DEBUG
