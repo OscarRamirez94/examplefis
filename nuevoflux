@@ -1,0 +1,68 @@
+@RestController
+@RequestMapping("/api/filtrado")
+public class FiltradoController {
+
+    private final FiltroServicio filtroServicio;
+
+    public FiltradoController(FiltroServicio filtroServicio) {
+        this.filtroServicio = filtroServicio;
+    }
+
+    @GetMapping
+    public Mono<ResponseEntity<Flux<RespuestaExterna>>> obtenerFiltrado(@RequestParam(defaultValue = "I") String status) {
+        Flux<RespuestaExterna> flujoFiltrado = filtroServicio.filtrarPorStatus(status);
+
+        return Mono.just(
+            ResponseEntity.ok(flujoFiltrado)
+        );
+    }
+}
+
+
+
+@Service
+public class ClienteServicioExterno {
+
+    private final WebClient webClient;
+
+    public ClienteServicioExterno(WebClient webClient) {
+        this.webClient = webClient;
+    }
+
+    public Flux<RespuestaExterna> obtenerDatos() {
+        return webClient.get()
+            .uri("/api/external") // Cambia esta URI por la real
+            .retrieve()
+            .bodyToFlux(RespuestaExterna.class);
+    }
+}
+
+
+@Service
+public class FiltroServicio {
+
+    private final ClienteServicioExterno clienteServicioExterno;
+
+    public FiltroServicio(ClienteServicioExterno clienteServicioExterno) {
+        this.clienteServicioExterno = clienteServicioExterno;
+    }
+
+    public Flux<RespuestaExterna> filtrarPorStatus(String status) {
+        return clienteServicioExterno.obtenerDatos()
+            .map(respuestaExterna -> {
+                // Si hay errores, retornamos la respuesta tal cual
+                if (respuestaExterna.getErrores() != null && !respuestaExterna.getErrores().isEmpty()) {
+                    return respuestaExterna;
+                }
+
+                // Si no hay errores, filtramos la lista de resultados por status
+                List<StatusDto> filtrados = respuestaExterna.getResultados().stream()
+                        .filter(dto -> status.equalsIgnoreCase(dto.getStatus()))
+                        .collect(Collectors.toList());
+
+                // Creamos una nueva respuesta con los resultados filtrados
+                respuestaExterna.setResultados(filtrados);
+                return respuestaExterna;
+            });
+    }
+}
