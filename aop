@@ -1,3 +1,25 @@
+
+public class ClientException extends RuntimeException {
+
+    private final int statusCode;
+    private final String responseBody;
+
+    public ClientException(String message, int statusCode, String responseBody) {
+        super(message);
+        this.statusCode = statusCode;
+        this.responseBody = responseBody;
+    }
+
+    public int getStatusCode() {
+        return statusCode;
+    }
+
+    public String getResponseBody() {
+        return responseBody;
+    }
+}
+
+
 @Around("@annotation(HandleWebClientErrors)")
 public Object interceptarErrores(ProceedingJoinPoint pjp) throws Throwable {
     try {
