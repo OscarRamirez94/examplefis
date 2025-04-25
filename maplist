@@ -74,3 +74,21 @@ public class RespuestaFiltrada {
         this.codigo = codigo;
     }
 }
+
+
+@RestController
+@RequestMapping("/api/filtrado")
+public class FiltradoController {
+
+    private final FiltroServicio filtroServicio;
+
+    public FiltradoController(FiltroServicio filtroServicio) {
+        this.filtroServicio = filtroServicio;
+    }
+
+    @GetMapping
+    public Flux<ResponseEntity<RespuestaFiltrada>> obtenerFiltrado(@RequestParam(defaultValue = "I") String status) {
+        return filtroServicio.filtrarPorStatus(status)
+            .map(respuestaFiltrada -> ResponseEntity.ok(respuestaFiltrada));
+    }
+}
