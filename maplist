@@ -1,0 +1,36 @@
+public class RespuestaFiltrada {
+    private List<NuevoDto> listaFiltrada; // Lista de objetos NuevoDto
+    private String mensaje;
+    private String codigo;
+
+    // Constructor, getters y setters
+    public RespuestaFiltrada(List<NuevoDto> listaFiltrada, String mensaje, String codigo) {
+        this.listaFiltrada = listaFiltrada;
+        this.mensaje = mensaje;
+        this.codigo = codigo;
+    }
+
+    public List<NuevoDto> getListaFiltrada() {
+        return listaFiltrada;
+    }
+
+    public void setListaFiltrada(List<NuevoDto> listaFiltrada) {
+        this.listaFiltrada = listaFiltrada;
+    }
+
+    public String getMensaje() {
+        return mensaje;
+    }
+
+    public void setMensaje(String mensaje) {
+        this.mensaje = mensaje;
+    }
+
+    public String getCodigo() {
+        return codigo;
+    }
+
+    public void setCodigo(String codigo) {
+        this.codigo = codigo;
+    }
+}
