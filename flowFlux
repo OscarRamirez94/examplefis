@@ -65,3 +65,65 @@ public class ClienteServicioExterno {
         return Mono.just(dto);
     }
 }
+
+
+
+en flux.....
+
+
+
+@RestController
+@RequestMapping("/api/filtrado")
+public class FiltradoController {
+
+    private final ClienteServicioExterno clienteServicioExterno;
+    private final FiltroServicio filtroServicio;
+
+    public FiltradoController(ClienteServicioExterno clienteServicioExterno, FiltroServicio filtroServicio) {
+        this.clienteServicioExterno = clienteServicioExterno;
+        this.filtroServicio = filtroServicio;
+    }
+
+    @GetMapping
+    public Mono<ResponseEntity<?>> obtenerFiltrado(@RequestParam(defaultValue = "I") String status) {
+        return clienteServicioExterno.obtenerErrores()
+            .flatMap(errores -> {
+                if (!errores.isEmpty()) {
+                    return Mono.just(ResponseEntity.badRequest().body(Map.of("errores", errores)));
+                } else {
+                    Flux<StatusDto> resultadosFiltrados = filtroServicio
+                        .filtrarPorStatus(clienteServicioExterno.obtenerResultados(), status);
+
+                    return Mono.just(ResponseEntity.ok(resultadosFiltrados));
+                }
+            });
+    }
+}
+
+
+@Service
+public class FiltroServicio {
+
+    public Flux<StatusDto> filtrarPorStatus(Flux<StatusDto> flujo, String status) {
+        return flujo.filter(dto -> status.equalsIgnoreCase(dto.getStatus()));
+    }
+}
+
+
+@Service
+public class ClienteServicioExterno {
+
+    public Mono<List<ErrorDto>> obtenerErrores() {
+        // Simula sin errores
+        return Mono.just(Collections.emptyList());
+    }
+
+    public Flux<StatusDto> obtenerResultados() {
+        List<StatusDto> resultados = List.of(
+            new StatusDto("A"),
+            new StatusDto("I"),
+            new StatusDto("I")
+        );
+        return Flux.fromIterable(resultados);
+    }
+}
