@@ -1,0 +1,47 @@
+import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
+
+public class RandomResponseGenerator {
+
+    static class MiObjeto {
+        String nombre;
+
+        MiObjeto(String nombre) {
+            this.nombre = nombre;
+        }
+
+        @Override
+        public String toString() {
+            return nombre;
+        }
+    }
+
+    public static Map<String, Object> generarRespuesta() {
+        Map<String, Object> respuesta = new HashMap<>();
+        boolean status = ThreadLocalRandom.current().nextBoolean(); // true o false
+
+        List<MiObjeto> lista = new ArrayList<>();
+
+        if (status) {
+            lista.add(new MiObjeto("Objeto A"));
+            lista.add(new MiObjeto("Objeto B"));
+            respuesta.put("status", true);
+        } else {
+            for (int i = 1; i <= 10; i++) {
+                lista.add(new MiObjeto("Objeto " + i));
+            }
+            respuesta.put("status", false);
+        }
+
+        respuesta.put("data", lista);
+        return respuesta;
+    }
+
+    public static void main(String[] args) {
+        // Ejecutamos varias veces para ver los dos casos
+        for (int i = 0; i < 5; i++) {
+            Map<String, Object> resultado = generarRespuesta();
+            System.out.println("Resultado: " + resultado);
+        }
+    }
+}
