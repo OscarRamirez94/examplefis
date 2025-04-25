@@ -1,5 +1,38 @@
 
 
+
+
+public Mono<Object> obtenerRespuesta() {
+    return webClient.get()
+            .uri("/tu-endpoint")
+            .retrieve()
+            .onStatus(HttpStatus::is5xxServerError, response ->
+                response.bodyToMono(String.class)  // Leemos el body si es error
+                        .map(errorMsg -> {
+                            MiObjetoRespuesta obj = new MiObjetoRespuesta();
+                            obj.setNotificationMessage(errorMsg); // Guardamos el mensaje
+                            return obj;
+                        })
+                        .flatMap(objeto -> Mono.error(new MiExcepcionConObjeto(objeto)))  // Lanza la excepción
+            )
+            .onStatus(HttpStatus::is2xxSuccessful, response -> {
+                // Aquí simplemente usamos el tipo que deseas deserializar directamente
+                return response.bodyToMono(TuClaseRespuesta.class);  // Mapeamos a TuClaseRespuesta
+            })
+            .doOnError(e -> {
+                // Opcional: Manejo de errores global o logging
+                System.out.println("Error: " + e.getMessage());
+            })
+            .onErrorResume(MiExcepcionConObjeto.class, ex -> {
+                // Manejo de la excepción personalizada, retornamos el objeto
+                return Mono.just(ex.getRespuesta());
+            });
+}
+
+
+
+
+
 import org.springframework.core.ParameterizedTypeReference;
 
 public Mono<Object> obtenerRespuesta(String tipoDeRespuesta) {
