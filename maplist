@@ -122,3 +122,64 @@ public class FiltradoController {
             });
     }
 }
+
+
+
+monosingle 
+
+
+
+@RestController
+@RequestMapping("/api/filtrado")
+public class FiltradoController {
+
+    private final FiltroServicio filtroServicio;
+
+    public FiltradoController(FiltroServicio filtroServicio) {
+        this.filtroServicio = filtroServicio;
+    }
+
+    @GetMapping
+    public Mono<ResponseEntity<RespuestaFiltrada>> obtenerFiltrado(@RequestParam(defaultValue = "I") String status) {
+        return filtroServicio.filtrarPorStatus(status)
+            .map(respuesta -> {
+                if (respuesta.getListaFiltrada().isEmpty()) {
+                    return ResponseEntity.noContent().build();
+                }
+                return ResponseEntity.ok(respuesta);
+            })
+            .defaultIfEmpty(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new RespuestaFiltrada(Collections.emptyList(), "Error al procesar datos", "500")));
+    }
+}
+
+
+
+@Service
+public class FiltroServicio {
+
+    private final ClienteServicioExterno clienteServicioExterno;
+
+    public FiltroServicio(ClienteServicioExterno clienteServicioExterno) {
+        this.clienteServicioExterno = clienteServicioExterno;
+    }
+
+    public Mono<RespuestaFiltrada> filtrarPorStatus(String status) {
+        return clienteServicioExterno.obtenerDatos()
+            .map(respuestaExterna -> {
+                if (respuestaExterna.getErrores() != null && !respuestaExterna.getErrores().isEmpty()) {
+                    return new RespuestaFiltrada(Collections.emptyList(), "Errores encontrados", "400");
+                }
+
+                List<StatusDto> filtrados = respuestaExterna.getResultados().stream()
+                        .filter(dto -> status.equalsIgnoreCase(dto.getStatus()))
+                        .collect(Collectors.toList());
+
+                List<NuevoDto> nuevaLista = filtrados.stream()
+                        .map(dto -> new NuevoDto(dto.getStatus(), "Descripción para el status " + dto.getStatus()))
+                        .collect(Collectors.toList());
+
+                return new RespuestaFiltrada(nuevaLista, "Filtrado exitoso", "200");
+            });
+    }
+}
