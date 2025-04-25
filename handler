@@ -1,0 +1,87 @@
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Mono;
+
+@RestController
+public class MyController {
+
+    private final MyService myService;
+
+    public MyController(MyService myService) {
+        this.myService = myService;
+    }
+
+    @GetMapping("/consume")
+    public Mono<ResponseEntity<Object>> consumeApi() {
+        return myService.consumeExternalApi()
+                .map(response -> ResponseEntity.ok(response))  // Si la respuesta es exitosa, retornamos un 200 OK
+                .onErrorResume(WebClientException.class, error -> {
+                    // Si ocurre un error, el manejador global lo captura
+                    ErrorResponse errorResponse = new ErrorResponse("Error from API", error.getMessage());
+                    return Mono.just(ResponseEntity.status(500).body(errorResponse));  // O un 400, dependiendo del error
+                });
+    }
+}
+
+
+
+2
+
+
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.reactive.function.client.WebClientException;
+import reactor.core.publisher.Mono;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(WebClientException.class)
+    public Mono<ResponseEntity<Object>> handleWebClientException(WebClientException ex) {
+        // Manejo de errores de WebClient (400, 500)
+        ErrorResponse errorResponse = new ErrorResponse("Error from WebClient", ex.getMessage());
+        return Mono.just(ResponseEntity.status(500).body(errorResponse));  // O 400 según el error específico
+    }
+
+    // Otras excepciones
+}
+
+
+
+
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
+
+@Service
+public class MyService {
+
+    private final WebClient webClient;
+
+    public MyService(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.baseUrl("http://example.com").build();
+    }
+
+    public Mono<Object> consumeExternalApi() {
+        return webClient.get()
+                .uri("/endpoint")
+                .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+                          clientResponse -> {
+                              if (clientResponse.statusCode().is4xxClientError()) {
+                                  return clientResponse.bodyToMono(String.class)
+                                          .flatMap(errorMessage -> Mono.error(new WebClientException("Client Error: " + errorMessage)));
+                              } else if (clientResponse.statusCode().is5xxServerError()) {
+                                  return clientResponse.bodyToMono(String.class)
+                                          .flatMap(errorMessage -> Mono.error(new WebClientException("Server Error: " + errorMessage)));
+                              }
+                              return Mono.empty(); // No error for other status codes
+                          })
+                .bodyToMono(Object.class);
+    }
+}
+
+
