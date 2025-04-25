@@ -1,0 +1,67 @@
+controller 
+
+@RestController
+@RequestMapping("/api/filtrado")
+public class FiltradoController {
+
+    private final ClienteServicioExterno clienteServicioExterno;
+    private final FiltroServicio filtroServicio;
+
+    public FiltradoController(ClienteServicioExterno clienteServicioExterno, FiltroServicio filtroServicio) {
+        this.clienteServicioExterno = clienteServicioExterno;
+        this.filtroServicio = filtroServicio;
+    }
+
+    @GetMapping
+    public Mono<ResponseEntity<DtoFiltrado>> obtenerFiltrado() {
+        return clienteServicioExterno.obtenerDatos()
+            .map(filtroServicio::filtrarPorStatusI)
+            .map(ResponseEntity::ok);
+    }
+}
+
+
+servicio filtrado 
+
+@Service
+public class FiltroServicio {
+
+    public DtoFiltrado filtrarPorStatusI(Dto dto) {
+        if (dto.getErrores() != null && !dto.getErrores().isEmpty()) {
+            return new DtoFiltrado(dto.getErrores(), Collections.emptyList());
+        }
+
+        List<StatusFechaDto> filtrados = dto.getResultados().stream()
+            .filter(r -> "I".equals(r.getStatus()))
+            .collect(Collectors.toList());
+
+        return new DtoFiltrado(Collections.emptyList(), filtrados);
+    }
+}
+
+
+
+servicio orquestado 
+
+
+@Service
+public class ClienteServicioExterno {
+
+    public Mono<Dto> obtenerDatos() {
+        // Aquí iría el WebClient real. Simulamos respuesta.
+        Dto dto = new Dto();
+
+        // Simulamos sin errores y con resultados
+        dto.setErrores(Collections.emptyList());
+
+        List<StatusFechaDto> resultados = List.of(
+            new StatusFechaDto("A", LocalDate.now()),
+            new StatusFechaDto("I", LocalDate.now().minusDays(1)),
+            new StatusFechaDto("I", LocalDate.now().minusDays(2))
+        );
+
+        dto.setResultados(resultados);
+
+        return Mono.just(dto);
+    }
+}
