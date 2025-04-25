@@ -1,4 +1,16 @@
 
+
+
+
+
+@Around("execution(* com.tuempresa.tuproyecto.servicio.impl.MiServicioWebClientImpl.*(..))")
+public Object interceptarErrores(ProceedingJoinPoint pjp) throws Throwable {
+    // lógica del AOP
+}
+
+
+
+
 public class ClientException extends RuntimeException {
 
     private final int statusCode;
