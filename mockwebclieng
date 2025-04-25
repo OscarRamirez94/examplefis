@@ -1,0 +1,53 @@
+class ClienteServicioExternoIntegrationTest {
+
+    private MockWebServer mockWebServer;
+    private ClienteServicioExterno clienteServicioExterno;
+
+    @BeforeEach
+    void setup() throws IOException {
+        mockWebServer = new MockWebServer();
+        mockWebServer.start();
+
+        WebClient webClient = WebClient.builder()
+            .baseUrl(mockWebServer.url("/").toString())
+            .build();
+
+        clienteServicioExterno = new ClienteServicioExterno(webClient);
+    }
+
+    @AfterEach
+    void tearDown() throws IOException {
+        mockWebServer.shutdown();
+    }
+
+    @Test
+    void debeRetornarRespuestaSimuladaCorrecta() {
+        // 1. Petición simulada
+        PeticionDto peticion = new PeticionDto("valor");
+
+        // 2. Respuesta JSON simulada
+        String respuestaJson = """
+            {
+              "errores": [],
+              "resultados": [
+                { "status": "I", "fecha": "2024-04-01" }
+              ]
+            }
+        """;
+
+        // 3. Encolamos la respuesta simulada
+        mockWebServer.enqueue(new MockResponse()
+                .setBody(respuestaJson)
+                .addHeader("Content-Type", "application/json"));
+
+        // 4. Ejecutamos el test
+        clienteServicioExterno.enviarDatos(peticion)
+            .as(StepVerifier::create)
+            .assertNext(respuesta -> {
+                assertNotNull(respuesta);
+                assertEquals(1, respuesta.getResultados().size());
+                assertEquals("I", respuesta.getResultados().get(0).getStatus());
+            })
+            .verifyComplete();
+    }
+}
