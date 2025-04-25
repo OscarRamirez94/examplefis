@@ -167,3 +167,31 @@ class FiltroServicioTest {
             .verifyComplete();
     }
 }
+
+
+@ExtendWith(MockitoExtension.class)
+class FiltradoControllerTest {
+
+    @Mock
+    private FiltroServicio filtroServicio;
+
+    private FiltradoController controller;
+
+    @BeforeEach
+    void setUp() {
+        controller = new FiltradoController(filtroServicio);
+    }
+
+    @Test
+    void debeRetornarResponseEntityDesdeServicio() {
+        RespuestaFiltrada mockBody = new RespuestaFiltrada(List.of(new NuevoDto("I", "desc")), "OK", "200");
+        ResponseEntity<RespuestaFiltrada> response = ResponseEntity.ok(mockBody);
+
+        Mockito.when(filtroServicio.filtrarPorStatus("I")).thenReturn(Mono.just(response));
+
+        controller.obtenerFiltrado("I")
+            .as(StepVerifier::create)
+            .expectNext(response)
+            .verifyComplete();
+    }
+}
