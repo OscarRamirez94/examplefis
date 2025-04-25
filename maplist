@@ -1,3 +1,6 @@
+
+
+
 @Service
 public class FiltroServicio {
 
@@ -90,5 +93,32 @@ public class FiltradoController {
     public Flux<ResponseEntity<RespuestaFiltrada>> obtenerFiltrado(@RequestParam(defaultValue = "I") String status) {
         return filtroServicio.filtrarPorStatus(status)
             .map(respuestaFiltrada -> ResponseEntity.ok(respuestaFiltrada));
+    }
+}
+
+
+
+
+@RestController
+@RequestMapping("/api/filtrado")
+public class FiltradoController {
+
+    private final FiltroServicio filtroServicio;
+
+    public FiltradoController(FiltroServicio filtroServicio) {
+        this.filtroServicio = filtroServicio;
+    }
+
+    @GetMapping
+    public Flux<ResponseEntity<RespuestaFiltrada>> obtenerFiltrado(@RequestParam(defaultValue = "I") String status) {
+        return filtroServicio.filtrarPorStatus(status)
+            .flatMap(respuestaFiltrada -> {
+                // Si la lista filtrada está vacía, retornamos un "no content"
+                if (respuestaFiltrada.getListaFiltrada().isEmpty()) {
+                    return Flux.just(ResponseEntity.noContent().build()); // O podrías retornar un BAD_REQUEST, según tu necesidad
+                }
+                // Si la lista tiene datos, retornamos OK con la lista filtrada
+                return Flux.just(ResponseEntity.ok(respuestaFiltrada));
+            });
     }
 }
