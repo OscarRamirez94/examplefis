@@ -1,4 +1,26 @@
 import org.springframework.http.ResponseEntity;
+import reactor.core.publisher.Mono;
+
+public class MyService {
+
+    public Mono<ResponseEntity<CreditDTO<OtherDTO>>> convertToSpecificResponse(Mono<ResponseEntity<Object>> monoResponse) {
+        return monoResponse
+            .flatMap(response -> {
+                if (response.getBody() instanceof CreditDTO) {
+                    // Si el cuerpo es del tipo CreditDTO<OtherDTO>, haz el cast
+                    CreditDTO<OtherDTO> creditDTO = (CreditDTO<OtherDTO>) response.getBody();
+                    return Mono.just(ResponseEntity.ok(creditDTO));
+                } else {
+                    // Si el cuerpo no es del tipo esperado, puedes manejar el error aquí
+                    return Mono.error(new IllegalArgumentException("Expected CreditDTO, but got something else"));
+                }
+            });
+    }
+}
+
+
+
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
