@@ -1,0 +1,78 @@
+@Service
+public class FiltroServicio {
+
+    private final ClienteServicioExterno clienteServicioExterno;
+
+    public FiltroServicio(ClienteServicioExterno clienteServicioExterno) {
+        this.clienteServicioExterno = clienteServicioExterno;
+    }
+
+    public Mono<RespuestaFiltrada> filtrarPorStatus(String status) {
+        return clienteServicioExterno.obtenerDatos()
+            .map(respuestaExterna -> {
+                // Si hay errores, retornamos la respuesta tal cual
+                if (respuestaExterna.getErrores() != null && !respuestaExterna.getErrores().isEmpty()) {
+                    return new RespuestaFiltrada(Collections.emptyList(), "Errores encontrados", "400");
+                }
+
+                // Filtramos la lista de resultados por status
+                List<StatusDto> filtrados = respuestaExterna.getResultados().stream()
+                        .filter(dto -> status.equalsIgnoreCase(dto.getStatus()))
+                        .collect(Collectors.toList());
+
+                // Creamos una nueva respuesta con la lista filtrada y los atributos adicionales
+                return new RespuestaFiltrada(filtrados, "Datos filtrados correctamente", "200");
+            });
+    }
+}
+
+
+
+@Service
+public class FiltroServicio {
+
+    private final ClienteServicioExterno clienteServicioExterno;
+
+    public FiltroServicio(ClienteServicioExterno clienteServicioExterno) {
+        this.clienteServicioExterno = clienteServicioExterno;
+    }
+
+    public Mono<RespuestaFiltrada> filtrarPorStatus(String status) {
+        return clienteServicioExterno.obtenerDatos()
+            .map(respuestaExterna -> {
+                // Si hay errores, retornamos la respuesta tal cual
+                if (respuestaExterna.getErrores() != null && !respuestaExterna.getErrores().isEmpty()) {
+                    return new RespuestaFiltrada(Collections.emptyList(), "Errores encontrados", "400");
+                }
+
+                // Filtramos la lista de resultados por status
+                List<StatusDto> filtrados = respuestaExterna.getResultados().stream()
+                        .filter(dto -> status.equalsIgnoreCase(dto.getStatus()))
+                        .collect(Collectors.toList());
+
+                // Creamos una nueva respuesta con la lista filtrada y los atributos adicionales
+                return new RespuestaFiltrada(filtrados, "Datos filtrados correctamente", "200");
+            });
+    }
+}
+
+
+@RestController
+@RequestMapping("/api/filtrado")
+public class FiltradoController {
+
+    private final FiltroServicio filtroServicio;
+
+    public FiltradoController(FiltroServicio filtroServicio) {
+        this.filtroServicio = filtroServicio;
+    }
+
+    @GetMapping
+    public Mono<ResponseEntity<RespuestaFiltrada>> obtenerFiltrado(@RequestParam(defaultValue = "I") String status) {
+        return filtroServicio.filtrarPorStatus(status)
+            .map(respuestaFiltrada -> {
+                // Devolvemos la respuesta con los datos filtrados
+                return ResponseEntity.ok(respuestaFiltrada);
+            });
+    }
+}
