@@ -1,3 +1,43 @@
+@Service
+public class FiltroServicio {
+
+    private final ClienteServicioExterno clienteServicioExterno;
+
+    public FiltroServicio(ClienteServicioExterno clienteServicioExterno) {
+        this.clienteServicioExterno = clienteServicioExterno;
+    }
+
+    public Flux<RespuestaFiltrada> filtrarPorStatus(String status) {
+        return clienteServicioExterno.obtenerDatos()
+            .map(respuestaExterna -> {
+                // Si hay errores, retornamos la respuesta tal cual
+                if (respuestaExterna.getErrores() != null && !respuestaExterna.getErrores().isEmpty()) {
+                    return new RespuestaFiltrada(Collections.emptyList(), "Errores encontrados", "400");
+                }
+
+                // Filtramos la lista de resultados por status
+                List<StatusDto> filtrados = respuestaExterna.getResultados().stream()
+                        .filter(dto -> status.equalsIgnoreCase(dto.getStatus()))
+                        .collect(Collectors.toList());
+
+                // Convertimos la lista de StatusDto a una lista de NuevoDto
+                List<NuevoDto> nuevaLista = filtrados.stream()
+                        .map(dto -> new NuevoDto(dto.getStatus(), "Descripción para el status " + dto.getStatus()))
+                        .collect(Collectors.toList());
+
+                // Creamos una nueva respuesta con la lista convertida y los atributos adicionales
+                return new RespuestaFiltrada(nuevaLista, "Datos filtrados correctamente", "200");
+            });
+    }
+}
+
+
+
+
+
+
+
+
 public class RespuestaFiltrada {
     private List<NuevoDto> listaFiltrada; // Lista de objetos NuevoDto
     private String mensaje;
