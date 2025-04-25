@@ -1,0 +1,24 @@
+@Aspect
+@Component
+public class WebClientErrorAspect {
+
+    @Around("execution(public reactor.core.publisher.Mono<org.springframework.http.ResponseEntity<com.ejemplo.miapp.dto.BffResponse<..>>> com.ejemplo.miapp.servicio.MiServicioWebClient.*(..))")
+    public Object interceptarErrores(ProceedingJoinPoint pjp) throws Throwable {
+        try {
+            @SuppressWarnings("unchecked")
+            Mono<ResponseEntity<?>> original = (Mono<ResponseEntity<?>>) pjp.proceed();
+
+            return original.onErrorResume(WebClientResponseException.class, ex -> {
+                HttpStatus status = ex.getStatusCode();
+                ErrorResponse error = new ErrorResponse(String.valueOf(status.value()), ex.getResponseBodyAsString());
+                BffResponse<Object, ErrorResponse> response = new BffResponse<>(error);
+                return Mono.just(ResponseEntity.status(status).body(response));
+            });
+
+        } catch (Throwable ex) {
+            ErrorResponse error = new ErrorResponse("500", "Error inesperado: " + ex.getMessage());
+            BffResponse<Object, ErrorResponse> response = new BffResponse<>(error);
+            return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response));
+        }
+    }
+}
