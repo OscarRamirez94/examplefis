@@ -1,3 +1,18 @@
+
+webClient.get()
+         .uri("/tu-endpoint")
+         .retrieve()
+         .onStatus(HttpStatus::is5xxServerError, response ->
+             response.bodyToMono(String.class) // El mensaje de error en texto plano
+                     .map(msg -> new MiObjetoRespuesta(msg)) // Convertimos el string en tu objeto
+                     .flatMap(objeto -> Mono.error(new MiExcepcionConObjeto(objeto)))
+         )
+         .bodyToMono(TuClaseRespuesta.class);
+
+
+
+
+
 webClient.get()
          .uri("/tu-endpoint")
          .retrieve()
