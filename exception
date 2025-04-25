@@ -1,3 +1,30 @@
+import org.springframework.http.HttpStatus;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
+
+public Mono<ResponseEntity<Object>> handleWebClientResponse() {
+    return webClient.get()  // O el tipo de solicitud que estés usando
+        .uri("tu-url")
+        .exchangeToMono(response -> {
+            if (response.statusCode().equals(HttpStatus.OK)) {
+                // Si el código de estado es 200 (OK), procesas el cuerpo y lo devuelves
+                return response.bodyToMono(CreditProductResponse.class)
+                    .map(body -> ResponseEntity.ok(body));
+            } else if (response.statusCode().equals(HttpStatus.I_AM_A_TEAPOT)) {  // Código 209
+                // Si el código de estado es 209, regresas el error deseado
+                return response.bodyToMono(String.class)
+                    .map(errorMessage -> ResponseEntity.status(209).body("Error: " + errorMessage));
+            } else {
+                // Si el código no es 200 ni 209, manejas otros casos como lo desees
+                return Mono.just(ResponseEntity.status(response.statusCode()).build());
+            }
+        });
+}
+
+
+
+
+
 
 
 
