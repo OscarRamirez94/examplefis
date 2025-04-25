@@ -182,3 +182,31 @@ public class FiltroServicio {
         return respuesta;
     }
 }
+
+
+
+@RestController
+@RequestMapping("/api/filtrado")
+public class FiltradoController {
+
+    private final ClienteServicioExterno clienteServicioExterno;
+    private final FiltroServicio filtroServicio;
+
+    public FiltradoController(ClienteServicioExterno clienteServicioExterno, FiltroServicio filtroServicio) {
+        this.clienteServicioExterno = clienteServicioExterno;
+        this.filtroServicio = filtroServicio;
+    }
+
+    @GetMapping
+    public Mono<ResponseEntity<RespuestaExterna>> obtenerFiltrado(@RequestParam(defaultValue = "I") String status) {
+        return clienteServicioExterno.obtenerDatos()
+            .map(dto -> {
+                if (dto.getErrores() != null && !dto.getErrores().isEmpty()) {
+                    return ResponseEntity.badRequest().body(dto);
+                } else {
+                    RespuestaExterna filtrada = filtroServicio.filtrarPorStatus(dto, status);
+                    return ResponseEntity.ok(filtrada);
+                }
+            });
+    }
+}
