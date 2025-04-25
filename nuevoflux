@@ -66,3 +66,36 @@ public class FiltroServicio {
             });
     }
 }
+
+
+
+public Mono<ResponseEntity<RespuestaFiltrada>> filtrarPorStatus(String status) {
+    return clienteServicioExterno.obtenerDatos()
+        .flatMap(respuestaExterna -> {
+            if (respuestaExterna == null) {
+                return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new RespuestaFiltrada(Collections.emptyList(), "Respuesta externa nula", "500")));
+            }
+
+            if (respuestaExterna.getErrores() != null && !respuestaExterna.getErrores().isEmpty()) {
+                return Mono.just(ResponseEntity
+                    .badRequest()
+                    .body(new RespuestaFiltrada(Collections.emptyList(), "Errores encontrados", "400")));
+            }
+
+            List<StatusDto> resultados = Optional.ofNullable(respuestaExterna.getResultados()).orElse(Collections.emptyList());
+
+            List<NuevoDto> nuevaLista = resultados.stream()
+                .filter(dto -> status.equalsIgnoreCase(dto.getStatus()))
+                .map(dto -> new NuevoDto(dto.getStatus(), "Descripción " + dto.getStatus()))
+                .collect(Collectors.toList());
+
+            if (nuevaLista.isEmpty()) {
+                return Mono.just(ResponseEntity.noContent().build());
+            }
+
+            return Mono.just(ResponseEntity.ok(new RespuestaFiltrada(nuevaLista, "Filtrado exitoso", "200")));
+        })
+        .switchIfEmpty(Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(new RespuestaFiltrada(Collections.emptyList(), "Error inesperado", "500"))));
+}
