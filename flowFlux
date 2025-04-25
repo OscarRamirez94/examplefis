@@ -127,3 +127,30 @@ public class ClienteServicioExterno {
         return Flux.fromIterable(resultados);
     }
 }
+
+
+@Service
+public class ClienteServicioExterno {
+
+    private final WebClient webClient;
+
+    public ClienteServicioExterno(WebClient webClient) {
+        this.webClient = webClient;
+    }
+
+    public Mono<List<ErrorDto>> obtenerErrores() {
+        return webClient.get()
+            .uri("/api/external") // Ajusta el path
+            .retrieve()
+            .bodyToMono(RespuestaExterna.class)
+            .map(RespuestaExterna::getErrores);
+    }
+
+    public Flux<StatusDto> obtenerResultados() {
+        return webClient.get()
+            .uri("/api/external")
+            .retrieve()
+            .bodyToMono(RespuestaExterna.class)
+            .flatMapMany(respuesta -> Flux.fromIterable(respuesta.getResultados()));
+    }
+}
