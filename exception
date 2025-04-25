@@ -1,3 +1,25 @@
+
+import reactor.core.publisher.Mono;
+import org.springframework.http.ResponseEntity;
+
+public class MyService {
+
+    public Mono<CreditDTO<OtherDTO>> convertToCreditDTO(Mono<ResponseEntity<Object>> monoResponse) {
+        return monoResponse
+            .flatMap(response -> {
+                // Verificamos si el cuerpo es del tipo esperado (CreditDTO<OtherDTO>)
+                if (response.getBody() instanceof CreditDTO) {
+                    CreditDTO<OtherDTO> creditDTO = (CreditDTO<OtherDTO>) response.getBody();
+                    return Mono.just(creditDTO); // Retornamos el Mono con el tipo esperado
+                } else {
+                    return Mono.error(new IllegalArgumentException("Expected CreditDTO<OtherDTO> but got something else"));
+                }
+            });
+    }
+}
+
+
+
 import org.springframework.http.ResponseEntity;
 import reactor.core.publisher.Mono;
 
