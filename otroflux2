@@ -1,0 +1,64 @@
+@Service
+public class ClienteServicioExterno {
+
+    private final WebClient webClient;
+
+    public ClienteServicioExterno(WebClient webClient) {
+        this.webClient = webClient;
+    }
+
+    public Flux<RespuestaExterna> obtenerDatos() {
+        return webClient.get()
+            .uri("/api/external") // Cambia esta URI por la real
+            .retrieve()
+            .bodyToFlux(RespuestaExterna.class);
+    }
+}
+
+
+
+@Service
+public class FiltroServicio {
+
+    private final ClienteServicioExterno clienteServicioExterno;
+
+    public FiltroServicio(ClienteServicioExterno clienteServicioExterno) {
+        this.clienteServicioExterno = clienteServicioExterno;
+    }
+
+    public Flux<RespuestaFiltrada> filtrarPorStatus(String status) {
+        return clienteServicioExterno.obtenerDatos()
+            .map(respuestaExterna -> {
+                // Si hay errores, retornamos la respuesta tal cual
+                if (respuestaExterna.getErrores() != null && !respuestaExterna.getErrores().isEmpty()) {
+                    return new RespuestaFiltrada(Collections.emptyList(), "Errores encontrados", "400");
+                }
+
+                // Filtramos la lista de resultados por status
+                List<StatusDto> filtrados = respuestaExterna.getResultados().stream()
+                        .filter(dto -> status.equalsIgnoreCase(dto.getStatus()))
+                        .collect(Collectors.toList());
+
+                // Creamos una nueva respuesta con la lista filtrada y los atributos adicionales
+                return new RespuestaFiltrada(filtrados, "Datos filtrados correctamente", "200");
+            });
+    }
+
+
+
+@RestController
+@RequestMapping("/api/filtrado")
+public class FiltradoController {
+
+    private final FiltroServicio filtroServicio;
+
+    public FiltradoController(FiltroServicio filtroServicio) {
+        this.filtroServicio = filtroServicio;
+    }
+
+    @GetMapping
+    public Flux<ResponseEntity<RespuestaFiltrada>> obtenerFiltrado(@RequestParam(defaultValue = "I") String status) {
+        return filtroServicio.filtrarPorStatus(status)
+            .map(respuestaFiltrada -> ResponseEntity.ok(respuestaFiltrada));
+    }
+}
