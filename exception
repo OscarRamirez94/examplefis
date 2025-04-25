@@ -1,4 +1,32 @@
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
+public Mono<ResponseEntity<Object>> handleWebClientResponse() {
+    return webClient.get()  // O el tipo de solicitud que estés usando
+        .uri("tu-url")
+        .exchangeToMono(response -> {
+            if (response.statusCode().is2xxSuccessful()) {
+                // Si el código de estado es 2xx (200, 201, etc.), procesas el cuerpo
+                return response.bodyToMono(CreditProductResponse.class)
+                    .map(body -> ResponseEntity.ok(body));
+            } else if (response.statusCode().value() == 209) {
+                // Si el código de estado es 209, regresas el error deseado
+                return response.bodyToMono(String.class)
+                    .map(errorMessage -> ResponseEntity.status(209).body("Error: " + errorMessage));
+            } else if (response.statusCode().is4xxClientError()) {
+                // Si el código de estado es 4xx (por ejemplo, 400), lanzas una excepción
+                return response.bodyToMono(String.class)
+                    .flatMap(errorMessage -> {
+                        // Lanzas una excepción con el mensaje de error
+                        return Mono.error(new ClientException("Error 400: " + errorMessage));
+                    });
+            } else {
+                // Si no es 2xx ni 209 ni 4xx, se puede devolver la respuesta tal como está
+                return Mono.just(ResponseEntity.status(response.statusCode()).build());
+            }
+        });
+}
 
 
 
