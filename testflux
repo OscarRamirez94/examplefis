@@ -1,0 +1,72 @@
+@ExtendWith(MockitoExtension.class)
+class FiltroServicioTest {
+
+    @Mock
+    private ClienteServicioExterno clienteServicioExterno;
+
+    private FiltroServicio filtroServicio;
+
+    @BeforeEach
+    void setUp() {
+        filtroServicio = new FiltroServicio(clienteServicioExterno);
+    }
+
+    @Test
+    void debeRetornarOkConDatosFiltrados() {
+        StatusDto dto1 = new StatusDto("I", LocalDate.now());
+        StatusDto dto2 = new StatusDto("A", LocalDate.now());
+        RespuestaExterna respuesta = new RespuestaExterna(Collections.emptyList(), List.of(dto1, dto2));
+
+        Mockito.when(clienteServicioExterno.obtenerDatos()).thenReturn(Mono.just(respuesta));
+
+        filtroServicio.filtrarPorStatus("I")
+            .as(StepVerifier::create)
+            .expectNextMatches(response -> {
+                RespuestaFiltrada body = response.getBody();
+                return response.getStatusCode().is2xxSuccessful()
+                        && body != null
+                        && body.getListaFiltrada().size() == 1
+                        && body.getListaFiltrada().get(0).getStatus().equals("I");
+            })
+            .verifyComplete();
+    }
+
+    @Test
+    void debeRetornarNoContentCuandoNoHayResultados() {
+        StatusDto dto = new StatusDto("A", LocalDate.now());
+        RespuestaExterna respuesta = new RespuestaExterna(Collections.emptyList(), List.of(dto));
+
+        Mockito.when(clienteServicioExterno.obtenerDatos()).thenReturn(Mono.just(respuesta));
+
+        filtroServicio.filtrarPorStatus("I")
+            .as(StepVerifier::create)
+            .expectNextMatches(response -> response.getStatusCode().equals(HttpStatus.NO_CONTENT))
+            .verifyComplete();
+    }
+
+    @Test
+    void debeRetornarBadRequestCuandoHayErrores() {
+        RespuestaExterna respuesta = new RespuestaExterna(List.of("Error de validación"), Collections.emptyList());
+
+        Mockito.when(clienteServicioExterno.obtenerDatos()).thenReturn(Mono.just(respuesta));
+
+        filtroServicio.filtrarPorStatus("I")
+            .as(StepVerifier::create)
+            .expectNextMatches(response ->
+                    response.getStatusCode().equals(HttpStatus.BAD_REQUEST)
+                    && response.getBody() != null
+                    && response.getBody().getCodigo().equals("400")
+            )
+            .verifyComplete();
+    }
+
+    @Test
+    void debeRetornarInternalServerErrorCuandoNoHayRespuesta() {
+        Mockito.when(clienteServicioExterno.obtenerDatos()).thenReturn(Mono.empty());
+
+        filtroServicio.filtrarPorStatus("I")
+            .as(StepVerifier::create)
+            .expectNextMatches(response -> response.getStatusCode().equals(HttpStatus.INTERNAL_SERVER_ERROR))
+            .verifyComplete();
+    }
+}
