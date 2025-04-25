@@ -1,3 +1,22 @@
+@Around("@annotation(HandleWebClientErrors)")
+public Object interceptarErrores(ProceedingJoinPoint pjp) throws Throwable {
+    try {
+        @SuppressWarnings("unchecked")
+        Mono<?> original = (Mono<?>) pjp.proceed();
+
+        return original.onErrorResume(WebClientResponseException.class, ex -> {
+            // Puedes lanzar una excepción custom que tu GlobalExceptionHandler atrape
+            return Mono.error(new ClienteException("Error remoto: " + ex.getMessage(), ex.getStatusCode()));
+        });
+
+    } catch (Throwable ex) {
+        return Mono.error(new RuntimeException("Fallo inesperado: " + ex.getMessage()));
+    }
+}
+
+
+
+
 @Aspect
 @Component
 public class WebClientErrorAspect {
