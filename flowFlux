@@ -1,3 +1,8 @@
+
+
+
+
+
 controller 
 
 @RestController
@@ -152,5 +157,28 @@ public class ClienteServicioExterno {
             .retrieve()
             .bodyToMono(RespuestaExterna.class)
             .flatMapMany(respuesta -> Flux.fromIterable(respuesta.getResultados()));
+    }
+}
+
+
+mix @Service
+public class FiltroServicio {
+
+    public RespuestaExterna filtrarPorStatus(RespuestaExterna original, String status) {
+        if (original.getErrores() != null && !original.getErrores().isEmpty()) {
+            return original; // No se modifica si hay errores
+        }
+
+        List<StatusDto> filtrados = original.getResultados().stream()
+            .filter(dto -> status.equalsIgnoreCase(dto.getStatus()))
+            .collect(Collectors.toList());
+
+        RespuestaExterna respuesta = new RespuestaExterna();
+        respuesta.setErrores(Collections.emptyList());
+        respuesta.setResultados(filtrados);
+        respuesta.setCodigo(original.getCodigo());
+        respuesta.setMensaje(original.getMensaje());
+
+        return respuesta;
     }
 }
