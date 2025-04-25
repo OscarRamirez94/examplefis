@@ -1,0 +1,68 @@
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(ClientException.class)  // Captura excepciones específicas como ClientException
+    public ResponseEntity<ErrorResponse> handleClientException(ClientException ex) {
+        ErrorResponse errorResponse = new ErrorResponse("400", ex.getMessage());
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);  // Regresa un 400 con el objeto ErrorResponse
+    }
+
+    @ExceptionHandler(ServerException.class)  // Captura excepciones específicas como ServerException
+    public ResponseEntity<ErrorResponse> handleServerException(ServerException ex) {
+        ErrorResponse errorResponse = new ErrorResponse("500", ex.getMessage());
+        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);  // Regresa un 500 con el objeto ErrorResponse
+    }
+
+    // Otras excepciones que puedas manejar...
+}
+
+
+public class ErrorResponse {
+    private String code;
+    private String message;
+
+    public ErrorResponse(String code, String message) {
+        this.code = code;
+        this.message = message;
+    }
+
+    // Getters y Setters
+}
+
+
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
+
+@Service
+public class MyService {
+
+    private final WebClient webClient;
+
+    public MyService(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.baseUrl("http://example.com").build();
+    }
+
+    public Mono<Object> consumeExternalApi() {
+        return webClient.get()
+                .uri("/endpoint")
+                .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), 
+                          clientResponse -> {
+                              if (clientResponse.statusCode().is4xxClientError()) {
+                                  return clientResponse.bodyToMono(String.class)
+                                          .flatMap(errorMessage -> Mono.error(new ClientException("Client Error: " + errorMessage)));
+                              } else if (clientResponse.statusCode().is5xxServerError()) {
+                                  return clientResponse.bodyToMono(String.class)
+                                          .flatMap(errorMessage -> Mono.error(new ServerException("Server Error: " + errorMessage)));
+                              }
+                              return Mono.empty(); // No error for other status codes
+                          })
+                .bodyToMono(Object.class);
+    }
+}
