@@ -3,6 +3,36 @@ webClient.get()
          .uri("/tu-endpoint")
          .retrieve()
          .onStatus(HttpStatus::is5xxServerError, response ->
+             response.bodyToMono(String.class)  // Leemos el body si es error
+                     .map(errorMsg -> {
+                         MiObjetoRespuesta obj = new MiObjetoRespuesta();
+                         obj.setNotificationMessage(errorMsg); // Guardamos el mensaje
+                         return obj;
+                     })
+                     .flatMap(objeto -> Mono.error(new MiExcepcionConObjeto(objeto)))  // Lanza la excepción
+         )
+         .onStatus(HttpStatus::is2xxSuccessful, response ->
+             response.bodyToMono(TuClaseRespuesta.class)  // Cuando es 200, mapeamos a otro tipo
+         )
+         .doOnError(e -> {
+             // Opcional: Manejo de errores global o logging
+             System.out.println("Error: " + e.getMessage());
+         })
+         .onErrorResume(MiExcepcionConObjeto.class, ex -> {
+             // Manejo de la excepción personalizada, retornamos el objeto
+             return Mono.just(ex.getRespuesta());
+         });
+
+
+
+
+
+
+
+webClient.get()
+         .uri("/tu-endpoint")
+         .retrieve()
+         .onStatus(HttpStatus::is5xxServerError, response ->
              response.bodyToMono(String.class) // El mensaje de error en texto plano
                      .map(msg -> new MiObjetoRespuesta(msg)) // Convertimos el string en tu objeto
                      .flatMap(objeto -> Mono.error(new MiExcepcionConObjeto(objeto)))
