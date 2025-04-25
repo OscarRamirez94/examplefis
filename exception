@@ -1,0 +1,8 @@
+webClient.get()
+         .uri("/tu-endpoint")
+         .retrieve()
+         .onStatus(HttpStatus::is5xxServerError, response ->
+             response.bodyToMono(MiObjetoRespuesta.class)
+                     .flatMap(body -> Mono.error(new MiExcepcionConObjeto(body)))
+         )
+         .bodyToMono(TuClaseRespuesta.class);
