@@ -1,0 +1,75 @@
+public class BffResponse<T, E> {
+    private T data;
+    private E error;
+
+    // Constructor para éxito
+    public BffResponse(T data) {
+        this.data = data;
+        this.error = null;
+    }
+
+    // Constructor para error
+    public BffResponse(E error) {
+        this.data = null;
+        this.error = error;
+    }
+
+    public T getData() {
+        return data;
+    }
+
+    public void setData(T data) {
+        this.data = data;
+    }
+
+    public E getError() {
+        return error;
+    }
+
+    public void setError(E error) {
+        this.error = error;
+    }
+}
+
+
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
+
+@Service
+public class MyService {
+
+    private final WebClient webClient;
+
+    public MyService(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.baseUrl("http://example.com").build();
+    }
+
+    public Mono<ResponseEntity<BffResponse<ResponseDTO, ErrorResponse>>> consumeExternalApi() {
+        return webClient.get()
+                .uri("/endpoint")
+                .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+                          clientResponse -> {
+                              if (clientResponse.statusCode().is4xxClientError()) {
+                                  return clientResponse.bodyToMono(String.class)
+                                          .flatMap(errorMessage -> Mono.error(new WebClientException("Client Error: " + errorMessage)));
+                              } else if (clientResponse.statusCode().is5xxServerError()) {
+                                  return clientResponse.bodyToMono(String.class)
+                                          .flatMap(errorMessage -> Mono.error(new WebClientException("Server Error: " + errorMessage)));
+                              }
+                              return Mono.empty(); // No error for other status codes
+                          })
+                .bodyToMono(ResponseDTO.class)
+                .map(responseDto -> ResponseEntity.ok(new BffResponse<>(responseDto)))  // Éxito
+                .onErrorResume(WebClientException.class, error -> {
+                    ErrorResponse errorResponse = new ErrorResponse("500", error.getMessage());
+                    BffResponse<ResponseDTO, ErrorResponse> bffErrorResponse = new BffResponse<>(errorResponse);
+                    return Mono.just(ResponseEntity.status(500).body(bffErrorResponse));  // Error
+                });
+    }
+}
+
+
