@@ -1,0 +1,7 @@
+.onErrorResume(WebClientResponseException.class, ex -> {
+    ErrorResponse error = new ErrorResponse("1", "Error en la respuesta del servidor");
+    ResponseEntity<Object> responseEntity = ResponseEntity
+        .status(ex.getRawStatusCode())
+        .body(error);
+    return Mono.just(responseEntity);
+});
