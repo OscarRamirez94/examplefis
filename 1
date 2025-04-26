@@ -1,0 +1,140 @@
+public abstract class WebClientWrapperResponse {
+}
+
+public class CreditCardInquireStatusDaysSuccess extends WebClientWrapperResponse {
+    private CreditCardInquireStatusDaysResponse data;
+
+    public CreditCardInquireStatusDaysSuccess(CreditCardInquireStatusDaysResponse data) {
+        this.data = data;
+    }
+
+    public CreditCardInquireStatusDaysResponse getData() {
+        return data;
+    }
+}
+
+public class CreditCardInquireStatusDaysError extends WebClientWrapperResponse {
+    private ErrorResponse error;
+
+    public CreditCardInquireStatusDaysError(ErrorResponse error) {
+        this.error = error;
+    }
+
+    public ErrorResponse getError() {
+        return error;
+    }
+}
+
+
+
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
+
+public class CreditCardConnector {
+
+    private final WebClient webClient;
+
+    public CreditCardConnector(WebClient webClient) {
+        this.webClient = webClient;
+    }
+
+    public Mono<WebClientWrapperResponse> invokeCreditStatus(CreditCardInquireStatusDaysRequest request) {
+        return webClient.post()
+            .uri("/deposit/services/CreditCardInquireStatusDays/")
+            .bodyValue(request)
+            .exchangeToMono(clientResponse -> {
+                if (clientResponse.statusCode().is2xxSuccessful()) {
+                    return clientResponse.bodyToMono(CreditCardInquireStatusDaysResponse.class)
+                        .map(CreditCardInquireStatusDaysSuccess::new);
+                } else {
+                    return clientResponse.bodyToMono(String.class)
+                        .map(errorBody -> {
+                            ErrorResponse error = new ErrorResponse("1", "Error en el servidor: " + errorBody);
+                            return new CreditCardInquireStatusDaysError(error);
+                        });
+                }
+            });
+    }
+}
+
+
+
+import reactor.core.publisher.Mono;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+
+public class CreditCardService {
+
+    private final CreditCardConnector connector;
+
+    public CreditCardService(CreditCardConnector connector) {
+        this.connector = connector;
+    }
+
+    public Mono<ResponseEntity<CreditCardInquireStatusDaysResponse>> getCreditStatus(CreditCardInquireStatusDaysRequest request) {
+        return connector.invokeCreditStatus(request)
+            .flatMap(wrapperResponse -> {
+                if (wrapperResponse instanceof CreditCardInquireStatusDaysSuccess) {
+                    CreditCardInquireStatusDaysSuccess success = (CreditCardInquireStatusDaysSuccess) wrapperResponse;
+                    return Mono.just(ResponseEntity.ok(success.getData()));
+                } else if (wrapperResponse instanceof CreditCardInquireStatusDaysError) {
+                    CreditCardInquireStatusDaysError error = (CreditCardInquireStatusDaysError) wrapperResponse;
+                    return Mono.just(ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body(null)); // o puedes crear un error más detallado si quieres
+                } else {
+                    return Mono.just(ResponseEntity
+                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(null));
+                }
+            });
+    }
+}
+
+
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
+import org.springframework.http.ResponseEntity;
+
+@RestController
+@RequestMapping("/credit-card")
+public class CreditCardController {
+
+    private final CreditCardService creditCardService;
+
+    public CreditCardController(CreditCardService creditCardService) {
+        this.creditCardService = creditCardService;
+    }
+
+    @PostMapping("/inquire-status-days")
+    public Mono<ResponseEntity<CreditCardInquireStatusDaysResponse>> inquireStatusDays(@RequestBody CreditCardInquireStatusDaysRequest request) {
+        return creditCardService.getCreditStatus(request);
+    }
+}
+
+
+public class CreditCardInquireStatusDaysRequest {
+    // atributos
+}
+
+public class CreditCardInquireStatusDaysResponse {
+    // atributos
+}
+
+public class ErrorResponse {
+    private String codigo;
+    private String mensaje;
+
+    public ErrorResponse(String codigo, String mensaje) {
+        this.codigo = codigo;
+        this.mensaje = mensaje;
+    }
+
+    public String getCodigo() {
+        return codigo;
+    }
+
+    public String getMensaje() {
+        return mensaje;
+    }
+}
