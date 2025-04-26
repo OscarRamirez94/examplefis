@@ -1,3 +1,24 @@
+@Override
+public Mono<ResponseEntity<?>> invoke2(CreditCardInquireStatusDaysRequest request) {
+    return webClient.post()
+        .uri("/deposit/services/CreditCardInquireStatusDays/")
+        .bodyValue(request)
+        .exchangeToMono(clientResponse -> {
+            if (clientResponse.statusCode().is2xxSuccessful()) {
+                return clientResponse.bodyToMono(CreditCardInquireStatusDaysResponse.class)
+                    .map(body -> (ResponseEntity<?>) ResponseEntity.status(clientResponse.statusCode()).body(body));
+            } else {
+                return clientResponse.bodyToMono(String.class)
+                    .map(errorBody -> {
+                        ErrorResponse error = new ErrorResponse("1", "Error en el servidor: " + errorBody);
+                        return (ResponseEntity<?>) ResponseEntity.status(clientResponse.statusCode()).body(error);
+                    });
+            }
+        });
+}
+
+
+
 return webClient.post()
     .uri("/deposit/services/CreditCardInquireStatusDays/")
     .bodyValue(request)
