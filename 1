@@ -138,3 +138,125 @@ public class ErrorResponse {
         return mensaje;
     }
 }
+
+
+
+@Target(ElementType.METHOD)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface WebClientResponseHandler {
+}
+
+
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
+import org.springframework.web.reactive.function.client.ClientResponse;
+import org.springframework.http.HttpStatus;
+
+@Aspect
+@Component
+public class WebClientResponseAspect {
+
+    @Around("@annotation(WebClientResponseHandler)")
+    public Object handleWebClientResponse(ProceedingJoinPoint joinPoint) throws Throwable {
+        Object result = joinPoint.proceed();
+
+        if (result instanceof Mono<?>) {
+            return ((Mono<?>) result)
+                .flatMap(response -> {
+                    if (response instanceof ClientResponse) {
+                        ClientResponse clientResponse = (ClientResponse) response;
+
+                        if (clientResponse.statusCode().is2xxSuccessful()) {
+                            return clientResponse.bodyToMono(CreditCardInquireStatusDaysResponse.class);
+                        } else {
+                            return clientResponse.bodyToMono(String.class)
+                                .map(errorBody -> new ErrorResponse("1", "Error en el servidor: " + errorBody));
+                        }
+                    } else {
+                        return Mono.just(response); // no es un ClientResponse
+                    }
+                });
+        }
+
+        return result;
+    }
+}
+
+
+public class CreditCardConnector {
+
+    private final WebClient webClient;
+
+    public CreditCardConnector(WebClient webClient) {
+        this.webClient = webClient;
+    }
+
+    @WebClientResponseHandler
+    public Mono<ClientResponse> invokeCreditStatus(CreditCardInquireStatusDaysRequest request) {
+        return webClient.post()
+            .uri("/deposit/services/CreditCardInquireStatusDays/")
+            .bodyValue(request)
+            .exchangeToMono(Mono::just);
+    }
+}
+
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import reactor.core.publisher.Mono;
+
+public class CreditCardService {
+
+    private final CreditCardConnector connector;
+
+    public CreditCardService(CreditCardConnector connector) {
+        this.connector = connector;
+    }
+
+    public Mono<ResponseEntity<?>> getCreditStatus(CreditCardInquireStatusDaysRequest request) {
+        return connector.invokeCreditStatus(request)
+            .flatMap(response -> {
+                if (response instanceof CreditCardInquireStatusDaysResponse) {
+                    // Éxito
+                    CreditCardInquireStatusDaysResponse success = (CreditCardInquireStatusDaysResponse) response;
+                    return Mono.just(ResponseEntity.ok(success));
+                } else if (response instanceof ErrorResponse) {
+                    // Error
+                    ErrorResponse error = (ErrorResponse) response;
+                    return Mono.just(ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST) // podrías variar el status aquí según el código
+                        .body(error));
+                } else {
+                    // Algo totalmente inesperado
+                    ErrorResponse unknownError = new ErrorResponse("999", "Respuesta desconocida del servidor.");
+                    return Mono.just(ResponseEntity
+                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(unknownError));
+                }
+            });
+    }
+}
+
+
+import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
+import reactor.core.publisher.Mono;
+
+@RestController
+@RequestMapping("/api/v1/creditcard")
+public class CreditCardController {
+
+    private final CreditCardService creditCardService;
+
+    public CreditCardController(CreditCardService creditCardService) {
+        this.creditCardService = creditCardService;
+    }
+
+    @PostMapping("/status")
+    public Mono<ResponseEntity<?>> getCreditCardStatus(@RequestBody CreditCardInquireStatusDaysRequest request) {
+        return creditCardService.getCreditStatus(request);
+    }
+}
