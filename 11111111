@@ -1,0 +1,44 @@
+public Mono<ResponseEntity<CreditCardInquireStatusDaysExampleDTO>> getCreditStatus(CreditCardInquireStatusDaysRequest request) {
+    return connector.invokeCreditStatus(request)
+        .flatMap(wrapperResponse -> {
+            if (wrapperResponse instanceof CreditCardInquireStatusDaysSuccess success) {
+                return Mono.justOrEmpty(success.getData())
+                    .map(data -> {
+                        // Aquí haces la transformación
+                        List<EjemploDTO> listadto = data.getList().stream()
+                            .map(item -> {
+                                EjemploDTO dto = new EjemploDTO();
+                                dto.setCampo1(item.getCampo1());
+                                dto.setCampo2(item.getCampo2());
+                                // mapear lo que necesites
+                                return dto;
+                            })
+                            .collect(Collectors.toList());
+
+                        // Crear el DTO final
+                        CreditCardInquireStatusDaysExampleDTO responseDto = new CreditCardInquireStatusDaysExampleDTO();
+                        responseDto.setLista(listadto);
+                        // setear otros campos si necesitas
+                        
+                        return ResponseEntity.ok(responseDto);
+                    })
+                    .switchIfEmpty(Mono.just(ResponseEntity.noContent().build()));
+            } else if (wrapperResponse instanceof CreditCardInquireStatusDaysError error) {
+                return Mono.just(ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(mapErrorToExampleResponse(error)));
+            } else {
+                return Mono.just(ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new CreditCardInquireStatusDaysExampleDTO()));
+            }
+        });
+}
+
+// Método privado para mapear errores al nuevo DTO
+private CreditCardInquireStatusDaysExampleDTO mapErrorToExampleResponse(CreditCardInquireStatusDaysError error) {
+    CreditCardInquireStatusDaysExampleDTO response = new CreditCardInquireStatusDaysExampleDTO();
+    response.setCode(error.getError().getCode());
+    response.setMessage(error.getError().getMessage());
+    return response;
+}
