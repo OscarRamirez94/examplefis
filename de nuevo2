@@ -1,0 +1,15 @@
+public class ErrorResponse {
+    private String code;
+    private String message;
+    private int status;
+    private List<?> objects;  // Lista de objetos, la cual será `null` en caso de error.
+
+    public ErrorResponse(String code, String message, int status, List<?> objects) {
+        this.code = code;
+        this.message = message;
+        this.status = status;
+        this.objects = objects != null ? objects : null;  // Si no hay objetos, es null
+    }
+
+    // Getters y setters
+}
