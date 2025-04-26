@@ -1,4 +1,32 @@
+@Aspect
+@Component
+public class WebClientErrorAspect {
 
+    @Around("execution(* com.miempresa.servicio.impl..*(..)) && @annotation(HandleWebClientErrors)")
+    public Object manejarErrores(ProceedingJoinPoint pjp) throws Throwable {
+        try {
+            @SuppressWarnings("unchecked")
+            Mono<?> original = (Mono<?>) pjp.proceed();
+
+            return original.onErrorResume(WebClientResponseException.class, ex -> {
+                ErrorResponse error = new ErrorResponse(
+                    String.valueOf(ex.getRawStatusCode()),
+                    ex.getResponseBodyAsString()
+                );
+                
+                ResponseEntity<ErrorResponse> response = ResponseEntity
+                    .status(ex.getRawStatusCode())
+                    .body(error);
+
+                return Mono.just(response); // <-- AQUÍ devuelves un ResponseEntity
+            });
+
+        } catch (Throwable ex) {
+            ErrorResponse error = new ErrorResponse("500", "Fallo inesperado: " + ex.getMessage());
+            return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error));
+        }
+    }
+}
 
 
 
