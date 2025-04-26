@@ -1,3 +1,21 @@
+return webClient.post()
+    .uri("/deposit/services/CreditCardInquireStatusDays/")
+    .bodyValue(request)
+    .exchangeToMono(response -> {
+        if (response.statusCode().is2xxSuccessful()) {
+            return response.toEntity(CreditCardInquireStatusDaysResponse.class);
+        } else {
+            return response.bodyToMono(String.class)
+                .flatMap(errorBody -> {
+                    ErrorResponse error = new ErrorResponse("1", "Error en la respuesta del servidor: " + errorBody);
+                    return Mono.just(ResponseEntity.status(response.statusCode()).body(error));
+                });
+        }
+    });
+
+
+
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
