@@ -1,0 +1,26 @@
+public Mono<ResponseEntity<CreditCardInquireStatusDaysResponse>> getCreditStatus(CreditCardInquireStatusDaysRequest request) {
+    return connector.invokeCreditStatus(request)
+        .flatMap(wrapperResponse -> {
+            if (wrapperResponse instanceof CreditCardInquireStatusDaysSuccess success) {
+                return Mono.justOrEmpty(success.getData())
+                    .map(ResponseEntity::ok)
+                    .switchIfEmpty(Mono.just(ResponseEntity.noContent().build())); // 204 No Content si viene vacío
+            } else if (wrapperResponse instanceof CreditCardInquireStatusDaysError error) {
+                return Mono.just(ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(mapErrorToResponse(error)));
+            } else {
+                return Mono.just(ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new CreditCardInquireStatusDaysResponse()));
+            }
+        });
+}
+
+// Método privado para mapear errores
+private CreditCardInquireStatusDaysResponse mapErrorToResponse(CreditCardInquireStatusDaysError error) {
+    CreditCardInquireStatusDaysResponse response = new CreditCardInquireStatusDaysResponse();
+    response.setCode(error.getError().getCode());
+    response.setMessage(error.getError().getMessage());
+    return response;
+}
