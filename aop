@@ -1,4 +1,37 @@
+@Service
+public class MiServicioIntermedio {
 
+    private final MiServicioWebClient servicioWebClient;
+
+    public MiServicioIntermedio(MiServicioWebClient servicioWebClient) {
+        this.servicioWebClient = servicioWebClient;
+    }
+
+    @HandleWebClientErrors
+    public Mono<ResponseEntity<?>> obtenerCredito() {
+        return servicioWebClient.obtenerCredito()
+            .map(response -> {
+                if (response.getStatusCode() == HttpStatus.OK) {
+                    // Convertir OtroDto a Dto1 si es necesario
+                    Dto1 dto1 = convertirOtroDtoADto1(response.getBody());
+                    return ResponseEntity.ok(dto1);
+                } else {
+                    // Manejo de error
+                    ErrorResponse error = new ErrorResponse("ERROR", "Detalles del error");
+                    return ResponseEntity.status(response.getStatusCode()).body(error);
+                }
+            });
+    }
+
+    private Dto1 convertirOtroDtoADto1(OtroDto otroDto) {
+        // Lógica para convertir OtroDto a Dto1
+        return new Dto1(otroDto.getCampo1(), otroDto.getCampo2());
+    }
+}
+
+
+
+4
 @Aspect
 @Component
 public class WebClientErrorAspect {
