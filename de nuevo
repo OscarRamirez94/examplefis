@@ -1,0 +1,81 @@
+@Service
+public class MiServicioWebClient {
+
+    private final WebClient webClient;
+
+    public MiServicioWebClient(WebClient.Builder builder) {
+        this.webClient = builder.baseUrl("http://api.externa.com").build();
+    }
+
+    public Mono<ResponseEntity<OtroDto>> obtenerCredito() {
+        return webClient.get()
+            .uri("/credito")
+            .retrieve()
+            .toEntity(OtroDto.class)
+            .onErrorResume(WebClientResponseException.class, ex -> {
+                // Cuando ocurre un error 400 o 500, retornamos la estructura de error con lista null
+                ErrorResponse error = new ErrorResponse(
+                    String.valueOf(ex.getRawStatusCode()),
+                    "Error en la respuesta del servidor",
+                    ex.getRawStatusCode()
+                );
+                return Mono.just(ResponseEntity.status(ex.getRawStatusCode()).body(error));
+            });
+    }
+}
+
+
+
+@Service
+public class MiServicioOrquestador {
+
+    private final MiServicioWebClient servicioWebClient;
+
+    public MiServicioOrquestador(MiServicioWebClient servicioWebClient) {
+        this.servicioWebClient = servicioWebClient;
+    }
+
+    @HandleWebClientErrors
+    public Mono<ResponseEntity<?>> obtenerCredito() {
+        return servicioWebClient.obtenerCredito()
+            .flatMap(response -> {
+                if (response.getStatusCode() == HttpStatus.OK) {
+                    // Aquí, mapeamos el resultado exitoso del WebClient a otro DTO (por ejemplo, Dto1)
+                    Dto1 dto1 = convertirOtroDtoADto1(response.getBody());
+                    return Mono.just(ResponseEntity.ok(dto1));
+                } else {
+                    // Si hubo un error en el WebClient, devolvemos un error con lista null
+                    ErrorResponse error = new ErrorResponse("Error", "Detalles del error", response.getStatusCode().value(), null);
+                    return Mono.just(ResponseEntity.status(response.getStatusCode()).body(error));
+                }
+            })
+            .onErrorResume(ex -> {
+                // Si hay un error no esperado, devolvemos un error genérico
+                ErrorResponse error = new ErrorResponse("500", "Fallo inesperado", HttpStatus.INTERNAL_SERVER_ERROR.value(), null);
+                return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error));
+            });
+    }
+
+    private Dto1 convertirOtroDtoADto1(OtroDto otroDto) {
+        // Convierte OtroDto a Dto1 según tu lógica
+        return new Dto1(otroDto.getCampo1(), otroDto.getCampo2());
+    }
+}
+
+
+
+
+@RestController
+public class MiControlador {
+
+    private final MiServicioOrquestador servicioOrquestador;
+
+    public MiControlador(MiServicioOrquestador servicioOrquestador) {
+        this.servicioOrquestador = servicioOrquestador;
+    }
+
+    @GetMapping("/credito")
+    public Mono<ResponseEntity<?>> obtenerCredito() {
+        return servicioOrquestador.obtenerCredito();
+    }
+}
