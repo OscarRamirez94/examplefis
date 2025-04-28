@@ -1,0 +1,120 @@
+package com.example.controller;
+
+import org.springframework.http.ResponseEntity;
+import reactor.core.publisher.Mono;
+import com.example.model.CreditProductResponse;
+import com.example.model.CreditProduct;
+
+public interface CreditProductController {
+
+    Mono<ResponseEntity<CreditProductResponse<CreditProduct>>> getCreditProduct(String id);
+}
+
+
+
+package com.example.delegate;
+
+import com.example.model.CreditProductResponse;
+import com.example.model.CreditProduct;
+import reactor.core.publisher.Mono;
+import org.springframework.http.ResponseEntity;
+
+public interface CreditProductDelegate {
+
+    Mono<ResponseEntity<CreditProductResponse<CreditProduct>>> getCreditProduct(String id);
+}
+
+
+package com.example.delegate.impl;
+
+import com.example.delegate.CreditProductDelegate;
+import com.example.model.CreditProductResponse;
+import com.example.model.CreditProduct;
+import com.example.operation.CreditProductOperation;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
+
+@Component
+public class CreditProductDelegateImpl implements CreditProductDelegate {
+
+    private final CreditProductOperation creditProductOperation;
+
+    public CreditProductDelegateImpl(CreditProductOperation creditProductOperation) {
+        this.creditProductOperation = creditProductOperation;
+    }
+
+    @Override
+    public Mono<ResponseEntity<CreditProductResponse<CreditProduct>>> getCreditProduct(String id) {
+        return creditProductOperation.getCreditProduct(id);
+    }
+}
+
+
+package com.example.operation;
+
+import com.example.model.CreditProductResponse;
+import com.example.model.CreditProduct;
+import org.springframework.http.ResponseEntity;
+import reactor.core.publisher.Mono;
+
+public interface CreditProductOperation {
+    Mono<ResponseEntity<CreditProductResponse<CreditProduct>>> getCreditProduct(String id);
+}
+
+
+package com.example.operation.impl;
+
+import com.example.operation.CreditProductOperation;
+import com.example.model.CreditProductResponse;
+import com.example.model.CreditProduct;
+import com.example.service.CreditProductService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
+
+@Component
+public class CreditProductOperationImpl implements CreditProductOperation {
+
+    private final CreditProductService creditProductService;
+
+    public CreditProductOperationImpl(CreditProductService creditProductService) {
+        this.creditProductService = creditProductService;
+    }
+
+    @Override
+    public Mono<ResponseEntity<CreditProductResponse<CreditProduct>>> getCreditProduct(String id) {
+        return creditProductService.findById(id)
+            .map(response -> ResponseEntity.ok(response));
+    }
+}
+
+
+
+
+package com.example.controller.impl;
+
+import com.example.controller.CreditProductController;
+import com.example.delegate.CreditProductDelegate;
+import com.example.model.CreditProductResponse;
+import com.example.model.CreditProduct;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
+import org.springframework.http.ResponseEntity;
+
+@RestController
+@RequestMapping("/api/credit-products")
+public class CreditProductControllerImpl implements CreditProductController {
+
+    private final CreditProductDelegate creditProductDelegate;
+
+    public CreditProductControllerImpl(CreditProductDelegate creditProductDelegate) {
+        this.creditProductDelegate = creditProductDelegate;
+    }
+
+    @GetMapping("/{id}")
+    @Override
+    public Mono<ResponseEntity<CreditProductResponse<CreditProduct>>> getCreditProduct(@PathVariable String id) {
+        return creditProductDelegate.getCreditProduct(id);
+    }
+}
