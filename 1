@@ -1,4 +1,11 @@
 
+Optional<String> ultimo = nombres.isEmpty()
+    ? Optional.empty()
+    : Optional.of(nombres.get(nombres.size() - 1));
+
+
+
+
 Optional<Persona> personaEncontrada = personas.stream()
     .filter(p -> "Luis".equals(p.getNombre()))
     .findFirst();
