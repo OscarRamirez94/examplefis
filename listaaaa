@@ -1,0 +1,10 @@
+import java.util.List;
+import java.util.Optional;
+
+List<String> lista = List.of("uno", "dos", "tres");
+
+Optional<String> ultimo = lista.isEmpty()
+    ? Optional.empty()
+    : Optional.of(lista.get(lista.size() - 1));
+
+ultimo.ifPresent(System.out::println);
