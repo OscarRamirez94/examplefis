@@ -1,3 +1,24 @@
+import java.util.List;
+
+public class MiServicio {
+
+    public Resultado procesar(int a, List<String> inreg) {
+        if (a == 0) {
+            return new Resultado(false, 0);
+        }
+
+        // Verificamos el índice a-1 porque las listas son 0-indexadas
+        String valor = (a <= inreg.size()) ? inreg.get(a - 1) : "";
+
+        boolean moreRecords = valor.startsWith("+");
+
+        return new Resultado(moreRecords, a);
+    }
+}
+
+
+
+
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
