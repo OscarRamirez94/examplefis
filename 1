@@ -1,3 +1,54 @@
+import static org.mockito.Mockito.*;
+import static org.junit.Assert.*;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.http.ResponseEntity;
+import reactor.core.publisher.Mono;
+
+@RunWith(MockitoJUnitRunner.class)
+public class CustomerLookupRequestDelegateTest {
+
+    @Mock
+    private GetCustomerInfoOperation getCustomerInfoOperation;
+
+    @InjectMocks
+    private CustomerLookupRequestDelegate customerLookupRequestDelegate;
+
+    private CustomerLookupRequest request;
+
+    @Before
+    public void setUp() {
+        request = new CustomerLookupRequest(); // o inicialízalo con datos de prueba si es necesario
+    }
+
+    @Test
+    public void testHandleCustomerLookupRequest_Success() {
+        // Arrange
+        CreditProductResponse<CreditProduct> creditProductResponse = new CreditProductResponse<>();
+        ResponseEntity<CreditProductResponse<CreditProduct>> responseEntity = ResponseEntity.ok(creditProductResponse);
+        
+        when(getCustomerInfoOperation.handle(any(CustomerLookupRequest.class)))
+                .thenReturn(Mono.just(responseEntity));
+        
+        // Act
+        Mono<ResponseEntity<CreditProductResponse<CreditProduct>>> responseMono = customerLookupRequestDelegate.handleCustomerLookupRequest(request);
+        
+        // Assert
+        ResponseEntity<CreditProductResponse<CreditProduct>> result = responseMono.block(); // Solo en test
+        assertNotNull(result);
+        assertEquals(responseEntity, result);
+        
+        verify(getCustomerInfoOperation, times(1)).handle(request);
+    }
+}
+
+
+
 public abstract class WebClientWrapperResponse {
 }
 
