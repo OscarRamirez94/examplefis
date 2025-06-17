@@ -1,0 +1,42 @@
+public class LineaCapturaValidator {
+
+    public static String validar(String input) {
+        if (input == null || input.isBlank()) {
+            throw new IllegalArgumentException("La línea de captura no puede estar vacía");
+        }
+
+        // Convertir a mayúsculas
+        String valor = input.toUpperCase();
+
+        // Validar longitud
+        if (valor.length() != 20) {
+            throw new IllegalArgumentException("La línea de captura debe tener exactamente 20 caracteres");
+        }
+
+        // Validar prefijo
+        if (!(valor.startsWith("02") || valor.startsWith("04"))) {
+            throw new IllegalArgumentException("La línea de captura debe iniciar con 02 o 04");
+        }
+
+        // Validar caracteres alfanuméricos
+        if (!valor.matches("[A-Z0-9]+")) {
+            throw new IllegalArgumentException("La línea de captura solo debe contener caracteres alfanuméricos y letras mayúsculas");
+        }
+
+        // Validar que no contenga la letra Ñ
+        if (valor.contains("Ñ")) {
+            throw new IllegalArgumentException("La línea de captura no debe contener la letra Ñ");
+        }
+
+        return valor; // Retorna la línea ya convertida a mayúsculas si todo está bien
+    }
+
+    public static void main(String[] args) {
+        try {
+            String resultado = validar("04abcde1234567890fgh"); // Ejemplo válido
+            System.out.println("Línea válida: " + resultado);
+        } catch (IllegalArgumentException e) {
+            System.err.println("Error: " + e.getMessage());
+        }
+    }
+}
