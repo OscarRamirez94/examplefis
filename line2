@@ -1,0 +1,53 @@
+public class LineaCapturaValidator {
+
+    public static boolean validarLineaCaptura(String linea) {
+        if (linea == null || linea.length() != 20) return false;
+
+        String tipoPago = linea.substring(0, 2);
+        String identificador = linea.substring(2, 10);
+        String referencia = linea.substring(10, 12);
+        String vigencia = linea.substring(12, 16);
+        String importe = linea.substring(16, 17);
+        String tipoValidacion = linea.substring(17, 18);
+        String digitosGlobales = linea.substring(18, 20);
+
+        return validarNumerico(tipoPago, 2) &&
+               validarAlfanumerico(identificador, 8) &&
+               validarAlfanumerico(referencia, 2) &&
+               validarNumerico(vigencia, 4) &&
+               validarNumerico(importe, 1) &&
+               (tipoValidacion.equals("2") || tipoValidacion.equals("4")) &&
+               validarNumerico(digitosGlobales, 2) &&
+               validarDigitoLuhn(linea.substring(0, 18) + importe, digitosGlobales);
+    }
+
+    private static boolean validarNumerico(String str, int length) {
+        return str.length() == length && str.matches("\\d{" + length + "}");
+    }
+
+    private static boolean validarAlfanumerico(String str, int length) {
+        return str.length() == length && str.matches("[A-Z0-9]{" + length + "}");
+    }
+
+    private static boolean validarDigitoLuhn(String base, String digitos) {
+        String cadena = base + digitos;
+        int suma = 0;
+        boolean alterna = false;
+
+        for (int i = cadena.length() - 1; i >= 0; i--) {
+            int n = Character.getNumericValue(cadena.charAt(i));
+            if (alterna) {
+                n *= 2;
+                if (n > 9) n -= 9;
+            }
+            suma += n;
+            alterna = !alterna;
+        }
+        return suma % 10 == 0;
+    }
+
+    public static void main(String[] args) {
+        String linea = "04123456AB78" + "1234" + "5" + "2" + "89"; // ejemplo
+        System.out.println("¿Línea válida?: " + validarLineaCaptura(linea));
+    }
+}
