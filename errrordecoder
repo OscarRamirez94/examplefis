@@ -1,0 +1,56 @@
+import feign.Response;
+import feign.codec.ErrorDecoder;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+public class CustomFeignErrorDecoder implements ErrorDecoder {
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ErrorDecoder defaultDecoder = new Default();
+
+    @Override
+    public Exception decode(String methodKey, Response response) {
+        try {
+            String body = response.body() != null ? 
+                new String(response.body().asInputStream().readAllBytes()) : "";
+
+            if (methodKey.contains("ClienteA")) {
+                return handleClienteA(response.status(), body);
+            } else if (methodKey.contains("ClienteB")) {
+                return handleClienteB(response.status(), body);
+            } else if (methodKey.contains("ClienteC")) {
+                return handleClienteC(response.status(), body);
+            } else {
+                return defaultDecoder.decode(methodKey, response);
+            }
+        } catch (Exception ex) {
+            return new RuntimeException("Error procesando la respuesta de error Feign", ex);
+        }
+    }
+
+    private Exception handleClienteA(int status, String body) {
+        if (status == 400 || status == 500) {
+            return new ClienteAException("Cliente A error: " + body);
+        }
+        return new RuntimeException("Error desconocido Cliente A");
+    }
+
+    private Exception handleClienteB(int status, String body) {
+        if (status == 400 || status == 500) {
+            return new ClienteBException("Cliente B error: " + body);
+        }
+        return new RuntimeException("Error desconocido Cliente B");
+    }
+
+    private Exception handleClienteC(int status, String body) throws Exception {
+        if (status == 400 || status == 500) {
+            ClienteCResponseDTO dto = objectMapper.readValue(body, ClienteCResponseDTO.class);
+            if (dto.getNotifications() != null && !dto.getNotifications().isEmpty()) {
+                Notification firstNotification = dto.getNotifications().get(0);
+                return new ClienteCException(firstNotification.getCode(), firstNotification.getMessage());
+            } else {
+                return new ClienteCException("UNKNOWN", "Error sin notificaciones");
+            }
+        }
+        return new RuntimeException("Error desconocido Cliente C");
+    }
+}
