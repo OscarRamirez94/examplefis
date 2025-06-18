@@ -1,0 +1,22 @@
+public class CustomErrorDecoder implements ErrorDecoder {
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Override
+    public Exception decode(String methodKey, Response response) {
+        try {
+            if (response.body() != null) {
+                String body = Util.toString(response.body().asReader());
+                
+                // Mapea el string JSON completo a PaymentValidateResponse
+                PaymentValidateResponse errorResponse = objectMapper.readValue(body, PaymentValidateResponse.class);
+                
+                // Aquí ya tienes acceso a errorResponse.getNotifications(), aunque data sea null o vacío
+                return new CustomFeignException(errorResponse);
+            }
+        } catch (Exception e) {
+            return new RuntimeException("Error decoding Feign response", e);
+        }
+        return new RuntimeException("Unexpected error without body, status: " + response.status());
+    }
+}
