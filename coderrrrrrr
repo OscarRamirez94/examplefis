@@ -1,0 +1,27 @@
+import feign.Response;
+import feign.Util;
+import feign.codec.ErrorDecoder;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.nio.charset.StandardCharsets;
+
+public class CustomErrorDecoder implements ErrorDecoder {
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Override
+    public Exception decode(String methodKey, Response response) {
+        try {
+            if (response.body() != null) {
+                byte[] bodyData = Util.toByteArray(response.body().asInputStream());
+                String body = new String(bodyData, StandardCharsets.UTF_8);
+
+                PaymentValidateResponse errorResponse = objectMapper.readValue(body, PaymentValidateResponse.class);
+
+                return new CustomFeignException(errorResponse);
+            }
+        } catch (Exception e) {
+            return new RuntimeException("Error decoding Feign response", e);
+        }
+        return new RuntimeException("Unexpected error without body, status: " + response.status());
+    }
+}
