@@ -1,0 +1,47 @@
+// ... (código anterior)
+
+@Override
+public String getSurrogate(Map<String, String> headersKeymaster, NaturalRequest naturalRequest, String dummy) { // Asumo que el último parámetro es dummy según tu código anterior.
+    loggerBalabit.info("init getsurrogate");
+
+    ResponseEntity<Map<String, Object>> responseKeymaster = baasKeymasterClient.getStatus(headersKeymaster, naturalRequest);
+
+    if (!responseKeymaster.getStatusCode().is2xxSuccessful()) {
+        loggerBalabit.info("error consume keymaster {}", responseKeymaster.getStatusCode());
+        throw new BffMobileException(ExceptionConstants.KEYMASTER_SERVICE, ExceptionConstants.KEYMASTER_CLIENT, "Error consuming Keymaster service");
+    }
+
+    Map<String, Object> keymasterMap = null;
+    // 1. Verificar si getBody() no es null antes de llamar a get("data")
+    if (responseKeymaster.getBody() != null) {
+        Object data = responseKeymaster.getBody().get("data");
+        // 2. Verificar si 'data' no es null y es una instancia de Map
+        if (data instanceof Map) {
+            keymasterMap = (Map<String, Object>) data;
+        } else {
+            // Loggear o manejar el caso en que "data" no es un mapa o es null.
+            loggerBalabit.warn("Key 'data' in Keymaster response body is not a Map or is null.");
+            // Podrías lanzar una excepción aquí si es un error crítico.
+            // throw new BffMobileException(ExceptionConstants.KEYMASTER_SERVICE, "Invalid 'data' format in Keymaster response.");
+        }
+    } else {
+        loggerBalabit.warn("Keymaster response body is null.");
+        // Podrías lanzar una excepción si un cuerpo nulo es un error.
+    }
+
+    String sessionCif = null;
+    // 3. Verificar si keymasterMap no es null antes de obtener "sessionCif"
+    if (keymasterMap != null) {
+        Object cifObject = keymasterMap.get("sessionCif");
+        if (cifObject != null) {
+            sessionCif = String.valueOf(cifObject);
+        } else {
+            loggerBalabit.warn("Key 'sessionCif' not found or is null in keymasterMap.");
+            // Si sessionCif es un campo mandatorio, aquí podrías lanzar una excepción.
+        }
+    }
+
+    // Devolver el valor de sessionCif. Si es null, String.valueOf(null) devolverá "null".
+    // Si prefieres devolver una cadena vacía o un valor por defecto si es null:
+    return sessionCif != null ? sessionCif : ""; // O null, o "VALOR_POR_DEFECTO"
+}
