@@ -7,3 +7,14 @@ implementation("dependencia-que-lo-trae:modulo:X.Y.Z") {
     exclude group: "org.eclipse.angus", module: "smtp"
 }
 implementation("org.eclipse.angus:smtp:
+
+
+
+
+dependencies {
+    implementation('org.springframework.boot:spring-boot-starter-mail') {
+        exclude group: 'org.eclipse.angus.mail', module: 'smtp'
+    }
+    implementation 'org.eclipse.angus.mail:smtp:2.0.4' // Reemplazar con una versión sin vulnerabilidades
+}
+
