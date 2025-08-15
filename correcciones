@@ -3,4 +3,7 @@ implementation("org.xhtmlrenderer:flying-saucer-pdf:9.1.22") {
 }
 implementation("org.bouncycastle:bcprov-jdk15on:1.81")
 
-
+implementation("dependencia-que-lo-trae:modulo:X.Y.Z") {
+    exclude group: "org.eclipse.angus", module: "smtp"
+}
+implementation("org.eclipse.angus:smtp:
