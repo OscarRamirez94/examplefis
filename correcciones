@@ -1,20 +1,15 @@
-implementation("org.xhtmlrenderer:flying-saucer-pdf:9.1.22") {
-    exclude group: "org.bouncycastle", module: "bcprov-jdk15on"
-}
-implementation("org.bouncycastle:bcprov-jdk15on:1.81")
-
-implementation("dependencia-que-lo-trae:modulo:X.Y.Z") {
-    exclude group: "org.eclipse.angus", module: "smtp"
-}
-implementation("org.eclipse.angus:smtp:
-
-
-
-
 dependencies {
-    implementation('org.springframework.boot:spring-boot-starter-mail') {
-        exclude group: 'org.eclipse.angus.mail', module: 'smtp'
-    }
-    implementation 'org.eclipse.angus.mail:smtp:2.0.4' // Reemplazar con una versión sin vulnerabilidades
-}
+    // Declaras el BOM para centralizar versiones
+    implementation platform("org.apache.cxf:cxf-bom:4.1.3")
 
+    // Solo lo que realmente usas
+    implementation "org.apache.cxf:cxf-rt-frontend-jaxws"
+
+    // Y pones constraints para obligar a que todas las transitivas de CXF
+    // usen la versión alineada
+    constraints {
+        implementation("org.apache.cxf:cxf-rt-frontend-jaxws:4.1.3")
+        implementation("org.apache.cxf:cxf-rt-transports-http:4.1.3")
+        implementation("org.apache.cxf:cxf-rt-features-logging:4.1.3")
+    }
+}
