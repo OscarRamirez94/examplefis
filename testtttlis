@@ -1,0 +1,68 @@
+import static org.mockito.Mockito.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
+class NotificationSchedulerTest {
+
+    @Mock
+    private ListenerOrchestrator listenerOrchestrator;
+
+    @InjectMocks
+    private NotificationScheduler notificationScheduler;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    void testSendNotification_WhenTwmEnabledTrue_ShouldInvokeOrchestrator() {
+        // given
+        notificationScheduler.twmEnabled = true;
+
+        // when
+        notificationScheduler.sendNotification();
+
+        // then
+        verify(listenerOrchestrator, times(1)).sendNotificationProcess();
+    }
+
+    @Test
+    void testSendNotification_WhenTwmEnabledFalse_ShouldNotInvokeOrchestrator() {
+        // given
+        notificationScheduler.twmEnabled = false;
+
+        // when
+        notificationScheduler.sendNotification();
+
+        // then
+        verify(listenerOrchestrator, never()).sendNotificationProcess();
+    }
+
+    @Test
+    void testCleanNotification_WhenTwmEnabledTrue_ShouldInvokeOrchestrator() {
+        // given
+        notificationScheduler.twmEnabled = true;
+
+        // when
+        notificationScheduler.cleanNotification();
+
+        // then
+        verify(listenerOrchestrator, times(1)).cleanNotificationProcess();
+    }
+
+    @Test
+    void testCleanNotification_WhenTwmEnabledFalse_ShouldNotInvokeOrchestrator() {
+        // given
+        notificationScheduler.twmEnabled = false;
+
+        // when
+        notificationScheduler.cleanNotification();
+
+        // then
+        verify(listenerOrchestrator, never()).cleanNotificationProcess();
+    }
+}
