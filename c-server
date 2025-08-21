@@ -1,0 +1,18 @@
+implementation 'org.springframework.cloud:spring-cloud-starter-config'
+
+
+spring:
+  application:
+    name: mi-servicio   # el nombre del repo/properties en el config server
+
+  config:
+    import: configserver:http://config-server:8888
+
+  cloud:
+    config:
+      fail-fast: true   # si no encuentra config, falla al arrancar (opcional)
+      retry:
+        max-attempts: 5
+        initial-interval: 2000
+        multiplier: 1.5
+        max-interval: 10000
