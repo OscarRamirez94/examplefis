@@ -16,3 +16,23 @@ spring:
         initial-interval: 2000
         multiplier: 1.5
         max-interval: 10000
+
+
+
+
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.ApplicationListener;
+import org.springframework.stereotype.Component;
+
+@Component
+public class ApplicationStartup implements ApplicationListener<ApplicationReadyEvent> {
+
+    @Override
+    public void onApplicationEvent(ApplicationReadyEvent event) {
+        String value = event.getApplicationContext()
+                .getEnvironment()
+                .getProperty("twm-enabled", "false");
+
+        System.out.println("🚀 twm-enabled = " + value);
+    }
+}
