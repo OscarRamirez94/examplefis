@@ -1,38 +1,15 @@
-implementation 'org.springframework.cloud:spring-cloud-starter-config'
-
-
-spring:
-  application:
-    name: mi-servicio   # el nombre del repo/properties en el config server
-
-  config:
-    import: configserver:http://config-server:8888
-
-  cloud:
-    config:
-      fail-fast: true   # si no encuentra config, falla al arrancar (opcional)
-      retry:
-        max-attempts: 5
-        initial-interval: 2000
-        multiplier: 1.5
-        max-interval: 10000
-
-
-
-
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.ApplicationListener;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ApplicationStartup implements ApplicationListener<ApplicationReadyEvent> {
+public class StartupLogger implements CommandLineRunner {
+
+    @Value("${twm-enabled:false}") // valor por defecto false
+    private boolean twmEnabled;
 
     @Override
-    public void onApplicationEvent(ApplicationReadyEvent event) {
-        String value = event.getApplicationContext()
-                .getEnvironment()
-                .getProperty("twm-enabled", "false");
-
-        System.out.println("🚀 twm-enabled = " + value);
+    public void run(String... args) {
+        System.out.println("🔹 twm-enabled = " + twmEnabled);
     }
 }
