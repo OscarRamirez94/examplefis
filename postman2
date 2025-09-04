@@ -1,0 +1,30 @@
+// --- PARSEAR EL RESPONSE SOAP ---
+let $ = cheerio.load(pm.response.text(), { xmlMode: true });
+
+// --- EXTRAER EL STATUSCODE ---
+let statusCode = $("v1\\:StatusCode").text();
+
+// --- LEER LOS DATOS DEL CSV ---
+let importe = pm.iterationData.get("importe");
+let linea   = pm.iterationData.get("linea");
+
+// --- LOG EN CONSOLA POR REQUEST ---
+console.log(`👉 Iteración ${pm.info.iteration} | Request=${pm.info.requestName} | Importe=${importe} | Linea=${linea} | StatusCode=${statusCode}`);
+
+// --- RECUPERAR EL RESUMEN ACUMULADO ---
+let stored = pm.collectionVariables.get("resumen") || "[]";
+let resumen = JSON.parse(stored);
+
+// --- GUARDAR SOLO LOS QUE TRAEN STATUSCODE=100 ---
+if (statusCode === "100") {
+    resumen.push({
+        request: pm.info.requestName,
+        iteration: pm.info.iteration,
+        importe: importe,
+        linea: linea,
+        statusCode: statusCode
+    });
+}
+
+// --- ACTUALIZAR VARIABLE DE COLECCIÓN ---
+pm.collectionVariables.set("resumen", JSON.stringify(resumen));
