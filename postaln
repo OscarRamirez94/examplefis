@@ -1,0 +1,16 @@
+// Cargar la librería de cheerio para parsear XML
+let $ = cheerio.load(pm.response.text(), { xmlMode: true });
+
+// Buscar el valor de StatusCode
+let statusCode = $("v1\\:StatusCode").text();
+
+// Mostrar en la consola de Postman
+console.log("👉 StatusCode =", statusCode);
+
+// Guardarlo como variable (por si lo necesitas después)
+pm.collectionVariables.set("statusCode", statusCode);
+
+// Hacer un test de ejemplo
+pm.test("El response trae StatusCode", function () {
+    pm.expect(statusCode).to.not.be.empty;
+});
