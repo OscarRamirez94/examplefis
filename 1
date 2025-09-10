@@ -15,7 +15,7 @@ public class FeignHttp5Config {
 
     @Bean
     public Client feignClient() throws Exception {
-        // SSLContext que confía en todos los certificados (⚠️ solo pruebas)
+        // ⚠️ Solo para pruebas: confiar en todos los certificados
         SSLContext sslContext = SSLContextBuilder.create()
                 .loadTrustMaterial(null, new TrustAllStrategy())
                 .build();
