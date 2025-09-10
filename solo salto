@@ -1,0 +1,9 @@
+import reactor.netty.transport.ssl.SslProvider;
+import javax.net.ssl.SSLException;
+
+HttpClient httpClient = HttpClient.create()
+        .secure(ssl -> ssl.sslContext(InsecureTrustManagerFactory.INSTANCE));
+
+WebClient webClient = WebClient.builder()
+        .clientConnector(new ReactorClientHttpConnector(httpClient))
+        .build();
