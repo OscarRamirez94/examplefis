@@ -1,0 +1,29 @@
+import feign.Client;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.ssl.TrustAllStrategy;
+import org.apache.http.ssl.SSLContextBuilder;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import javax.net.ssl.SSLContext;
+
+@Configuration
+public class FeignSslConfig {
+
+    @Bean
+    public Client feignClient() throws Exception {
+        // Crear SSLContext que confía en todos los certificados
+        SSLContext sslContext = SSLContextBuilder.create()
+                .loadTrustMaterial(null, new TrustAllStrategy())
+                .build();
+
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .setSSLContext(sslContext)
+                .setSSLHostnameVerifier(new NoopHostnameVerifier()) // ignora el CN del certificado
+                .build();
+
+        return new feign.httpclient.ApacheHttpClient(httpClient);
+    }
+}
