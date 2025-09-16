@@ -1,0 +1,15 @@
+java -cp jasypt-<version>.jar org.jasypt.intf.cli.JasyptPBEStringEncryptionCLI \
+  input="valorQueQuieresEncriptar" \
+  password=tu_password_jasypt \
+  algorithm=PBEWithMD5AndDES
+
+import org.jasypt.util.text.AES256TextEncryptor;
+
+public class EncryptValue {
+    public static void main(String[] args) {
+        AES256TextEncryptor encryptor = new AES256TextEncryptor();
+        encryptor.setPassword("tu_password_jasypt");
+        String encrypted = encryptor.encrypt("valorQueQuieresEncriptar");
+        System.out.println("ENC(" + encrypted + ")");
+    }
+}
