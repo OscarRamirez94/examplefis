@@ -8,3 +8,12 @@ URI uri = UriComponentsBuilder
 
 ResponseEntity<Map<String, Object>> responseEntity =
         restTemplate.exchange(uri, HttpMethod.GET, body, MAP_PARAMETERIZED_TYPE_REFERENCE);
+
+
+
+private String validateCif(String cif) {
+    if (cif == null || !cif.matches("[A-Za-z0-9_-]+")) {
+        throw new IllegalArgumentException("CIF no válido");
+    }
+    return cif;
+}
