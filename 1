@@ -1,31 +1,10 @@
-import feign.Client;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+String safeCif = validateCif(cifDecode);
 
-import javax.net.ssl.*;
-import java.security.cert.X509Certificate;
+URI uri = UriComponentsBuilder
+            .fromHttpUrl(baasCustomerUrl)  // Host/base fijo (propiedad o constante)
+            .pathSegment(safeCif)          // Agregas el parámetro como segmento
+            .build()
+            .toUri();
 
-@Configuration
-public class FeignSslSkipConfig {
-
-    @Bean
-    public Client feignClient() throws Exception {
-        // TrustManager que acepta todos los certificados
-        TrustManager[] trustAllCerts = new TrustManager[]{
-                new X509TrustManager() {
-                    public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
-                    public void checkClientTrusted(X509Certificate[] certs, String authType) { }
-                    public void checkServerTrusted(X509Certificate[] certs, String authType) { }
-                }
-        };
-
-        SSLContext sslContext = SSLContext.getInstance("TLS");
-        sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
-
-        HttpsURLConnection.setDefaultSSLSocketFactory(sslContext.getSocketFactory());
-        HttpsURLConnection.setDefaultHostnameVerifier((hostname, session) -> true);
-
-        // Cliente Feign que usa el HttpURLConnection por debajo
-        return new Client.Default(sslContext.getSocketFactory(), (hostname, session) -> true);
-    }
-}
+ResponseEntity<Map<String, Object>> responseEntity =
+        restTemplate.exchange(uri, HttpMethod.GET, body, MAP_PARAMETERIZED_TYPE_REFERENCE);
