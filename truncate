@@ -1,0 +1,14 @@
+public class Main {
+    public static void main(String[] args) {
+        System.out.println(truncarConPuntos("Contenidos"));
+        System.out.println(truncarConPuntos("Supercalifragilisticoespialidoso"));
+    }
+
+    public static String truncarConPuntos(String texto) {
+        if (texto == null) return null;
+        if (texto.length() <= 10) {
+            return texto;
+        }
+        return texto.substring(0, 7) + "...";
+    }
+}
