@@ -1,0 +1,89 @@
+// 1️⃣ Definir la URL base del servicio remoto en configuración, no en input del usuario
+// application.yml
+remote:
+  taxpayment:
+    base-url: "https://api.mi-banco.com/pagos/impuestos"
+
+// 2️⃣ En tu componente de delegación
+@Component
+public class TaxPaymentsRequestDelegate {
+
+    @Value("${remote.taxpayment.base-url}")
+    private String taxPaymentBaseUrl;
+
+    public RestConsumerRequest<TaxPaymentRequest> buildRequest(
+            String traceId,
+            String spanId,
+            String channelId,
+            String originatingApplCode,
+            String countryCode,
+            String apiVersion,
+            String userContext,
+            String authorization,
+            String key,
+            TaxPaymentRequest taxPaymentRequest) {
+
+        // Validar y sanear parámetros
+        String safeTraceId = sanitizeId(traceId);
+        String safeSpanId = sanitizeId(spanId);
+        String safeChannelId = sanitizeId(channelId);
+        String safeCountry = sanitizeCountry(countryCode);
+        String safeKey = sanitizeId(key);
+
+        // Construir headers con valores validados
+        Map<String, Object> headerParams = new HashMap<>();
+        headerParams.put("X-B3-TRACEID", safeTraceId);
+        headerParams.put("X-B3-SPANID", safeSpanId);
+        headerParams.put("X-CHANNEL-ID", safeChannelId);
+        headerParams.put("X-ORIGINATING-APPL-CODE", originatingApplCode);
+        headerParams.put("X-COUNTRY-CODE", safeCountry);
+        headerParams.put("X-API-VERSION", apiVersion);
+        headerParams.put("X-USER-CONTEXT", userContext);
+        headerParams.put("Authorization", maskToken(authorization));
+
+        // Path params validados
+        Map<String, Object> pathParams = new HashMap<>();
+        pathParams.put("key", safeKey);
+
+        // Validar campos dentro del request (ejemplo)
+        validateTaxPaymentRequest(taxPaymentRequest);
+
+        return RestConsumerRequest.<TaxPaymentRequest>builder()
+                .baseUrl(taxPaymentBaseUrl)          // 👈 host fijo
+                .headerParams(headerParams)
+                .pathParams(pathParams)
+                .request(taxPaymentRequest)
+                .build();
+    }
+
+    // Utilidades de validación
+    private String sanitizeId(String value) {
+        if (value == null || !value.matches("^[A-Za-z0-9_-]{1,50}$")) {
+            throw new IllegalArgumentException("Invalid identifier");
+        }
+        return value;
+    }
+
+    private String sanitizeCountry(String country) {
+        if (country == null || !country.matches("^[A-Z]{2,3}$")) {
+            throw new IllegalArgumentException("Invalid country code");
+        }
+        return country;
+    }
+
+    private String maskToken(String token) {
+        return token != null && token.length() > 8
+                ? token.substring(0, 4) + "****" + token.substring(token.length() - 4)
+                : token;
+    }
+
+    private void validateTaxPaymentRequest(TaxPaymentRequest req) {
+        // Ejemplo: validar que amount > 0 y que no haya URLs dentro de campos string
+        if (req.getAmount() <= 0) {
+            throw new IllegalArgumentException("Amount must be > 0");
+        }
+        if (req.getDescription() != null && req.getDescription().matches(".*https?://.*")) {
+            throw new IllegalArgumentException("Description cannot contain URLs");
+        }
+    }
+}
