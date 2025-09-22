@@ -1,19 +1,101 @@
-String safeCif = validateCif(cifDecode);
-
-URI uri = UriComponentsBuilder
-            .fromHttpUrl(baasCustomerUrl)  // Host/base fijo (propiedad o constante)
-            .pathSegment(safeCif)          // Agregas el parámetro como segmento
-            .build()
-            .toUri();
-
-ResponseEntity<Map<String, Object>> responseEntity =
-        restTemplate.exchange(uri, HttpMethod.GET, body, MAP_PARAMETERIZED_TYPE_REFERENCE);
+security:
+  allowed-hosts:
+    - api.dev.midominio.com
+    - auth.dev.midominio.com
+    - servicios.seguro.com
 
 
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
 
-private String validateCif(String cif) {
-    if (cif == null || !cif.matches("[A-Za-z0-9_-]+")) {
-        throw new IllegalArgumentException("CIF no válido");
+import java.util.List;
+
+@Component
+@ConfigurationProperties(prefix = "security")
+public class SecurityProperties {
+
+    private List<String> allowedHosts;
+
+    public List<String> getAllowedHosts() {
+        return allowedHosts;
     }
-    return cif;
+
+    public void setAllowedHosts(List<String> allowedHosts) {
+        this.allowedHosts = allowedHosts;
+    }
+}
+
+áaaaaaa
+import org.springframework.http.HttpRequest;
+import org.springframework.http.client.ClientHttpRequestExecution;
+import org.springframework.http.client.ClientHttpRequestInterceptor;
+import org.springframework.http.client.ClientHttpResponse;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.UnknownHostException;
+import java.util.List;
+
+public class SafeHostInterceptor implements ClientHttpRequestInterceptor {
+
+    private final List<String> allowedHosts;
+
+    public SafeHostInterceptor(List<String> allowedHosts) {
+        this.allowedHosts = allowedHosts;
+    }
+
+    @Override
+    public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution)
+            throws IOException {
+
+        URI uri = request.getURI();
+        validateUri(uri);
+
+        return execution.execute(request, body);
+    }
+
+    private void validateUri(URI uri) throws IOException {
+        String host = uri.getHost();
+
+        // ✅ Validar lista blanca desde application.yml
+        if (!allowedHosts.contains(host)) {
+            throw new IOException("Host no permitido: " + host);
+        }
+
+        // ✅ Bloquear loopback, privados, etc.
+        try {
+            InetAddress addr = InetAddress.getByName(host);
+            if (addr.isAnyLocalAddress() || addr.isLoopbackAddress() || addr.isSiteLocalAddress()) {
+                throw new IOException("Host bloqueado (privado/loopback): " + host);
+            }
+        } catch (UnknownHostException e) {
+            throw new IOException("No se puede resolver el host: " + host);
+        }
+    }
+}
+
+aaaa
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestTemplate;
+
+@Configuration
+public class RestTemplateConfig {
+
+    private final SecurityProperties securityProperties;
+
+    public RestTemplateConfig(SecurityProperties securityProperties) {
+        this.securityProperties = securityProperties;
+    }
+
+    @Bean
+    public RestTemplate restTemplate() {
+        RestTemplate restTemplate = new RestTemplate();
+        restTemplate.getInterceptors().add(
+            new SafeHostInterceptor(securityProperties.getAllowedHosts())
+        );
+        return restTemplate;
+    }
 }
