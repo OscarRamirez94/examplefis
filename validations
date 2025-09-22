@@ -1,0 +1,16 @@
+@PostMapping("/example")
+public ResponseEntity<Void> example(
+    @RequestHeader(value = "X-CHANNEL-ID", required = false)
+    @Pattern(regexp = "^[A-Za-z0-9_-]{1,30}$",
+             message = "Invalid X-CHANNEL-ID")
+    String xChannelId,
+
+    @RequestParam(value = "country", required = false)
+    @Pattern(regexp = "^[A-Z]{2,3}$",
+             message = "Country must be 2–3 uppercase letters")
+    String country
+) {
+    // xChannelId y country pueden ser null,
+    // pero si llegan deben cumplir el patrón
+    ...
+}
