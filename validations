@@ -14,3 +14,8 @@ public ResponseEntity<Void> example(
     // pero si llegan deben cumplir el patrón
     ...
 }
+
+
+
+@Pattern(regexp = "^[A-Za-z0-9-]+$", message = "Solo letras, números y guiones permitidos")
+private String key;
