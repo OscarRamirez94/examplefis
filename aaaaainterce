@@ -1,0 +1,41 @@
+import org.springframework.http.HttpRequest;
+import org.springframework.http.client.ClientHttpRequestExecution;
+import org.springframework.http.client.ClientHttpRequestInterceptor;
+import org.springframework.http.client.ClientHttpResponse;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.UnknownHostException;
+
+public class SafeHostInterceptor implements ClientHttpRequestInterceptor {
+
+    @Override
+    public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution)
+            throws IOException {
+
+        URI uri = request.getURI();
+        validateUri(uri);
+
+        return execution.execute(request, body);
+    }
+
+    private void validateUri(URI uri) throws IOException {
+        String host = uri.getHost();
+
+        // ✅ Validar lista blanca
+        if (!ALLOWED_HOSTS.contains(host)) {
+            throw new IOException("Host no permitido: " + host);
+        }
+
+        // ✅ Validar que no sea localhost, privado, etc.
+        try {
+            InetAddress addr = InetAddress.getByName(host);
+            if (addr.isAnyLocalAddress() || addr.isLoopbackAddress() || addr.isSiteLocalAddress()) {
+                throw new IOException("Host bloqueado (privado/loopback): " + host);
+            }
+        } catch (UnknownHostException e) {
+            throw new IOException("No se puede resolver el host: " + host);
+        }
+    }
+}
