@@ -44,3 +44,81 @@ public void generarPdf(List<Item> items) {
         }
     }
 }
+
+
+animado
+import java.lang.reflect.*;
+import java.util.*;
+import java.util.regex.Pattern;
+
+public class ValidadorDeUrls {
+
+    private static final Pattern URL_PATTERN = Pattern.compile("(?i)https?://");
+
+    public boolean contieneUrlEnObjeto(Object objeto) {
+        return contieneUrlEnObjeto(objeto, new HashSet<>());
+    }
+
+    private boolean contieneUrlEnObjeto(Object objeto, Set<Object> visitados) {
+        if (objeto == null || visitados.contains(objeto)) return false;
+        visitados.add(objeto);
+
+        if (objeto instanceof String valor) {
+            return URL_PATTERN.matcher(valor).find();
+        }
+
+        if (objeto instanceof Collection<?> coleccion) {
+            for (Object item : coleccion) {
+                if (contieneUrlEnObjeto(item, visitados)) return true;
+            }
+            return false;
+        }
+
+        if (objeto instanceof Map<?, ?> mapa) {
+            for (Object valor : mapa.values()) {
+                if (contieneUrlEnObjeto(valor, visitados)) return true;
+            }
+            return false;
+        }
+
+        if (objeto.getClass().isArray()) {
+            int length = Array.getLength(objeto);
+            for (int i = 0; i < length; i++) {
+                Object element = Array.get(objeto, i);
+                if (contieneUrlEnObjeto(element, visitados)) return true;
+            }
+            return false;
+        }
+
+        // Si es tipo primitivo, enum, wrapper, etc. => ignorar
+        if (esTipoBasico(objeto.getClass())) {
+            return false;
+        }
+
+        // Revisar campos del objeto (reflexión)
+        Field[] fields = objeto.getClass().getDeclaredFields();
+        for (Field field : fields) {
+            field.setAccessible(true);
+            try {
+                Object valor = field.get(objeto);
+                if (contieneUrlEnObjeto(valor, visitados)) {
+                    return true;
+                }
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return false;
+    }
+
+    private boolean esTipoBasico(Class<?> clazz) {
+        return clazz.isPrimitive()
+            || clazz.equals(String.class)
+            || Number.class.isAssignableFrom(clazz)
+            || Boolean.class.equals(clazz)
+            || Character.class.equals(clazz)
+            || Date.class.isAssignableFrom(clazz)
+            || clazz.isEnum();
+    }
+}
