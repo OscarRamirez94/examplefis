@@ -1,3 +1,27 @@
+private static final Pattern URL_PATTERN = Pattern.compile("(?i)https?://");
+
+public boolean contieneUrl(Map<String, String> mapa) {
+    return mapa.values().stream()
+        .filter(Objects::nonNull)
+        .anyMatch(valor -> URL_PATTERN.matcher(valor).find());
+}
+
+
+
+Map<String, String> headers = Map.of(
+    "Authorization", "Bearer xyz",
+    "X-Custom", "https://malicioso.com"
+);
+
+if (contieneUrl(headers)) {
+    throw new SecurityException("🚨 Parámetro contiene URL. Posible SSRF.");
+
+
+
+mmmmmm
+
+
+
 public void generarPdf(List<Item> items) {
     for (Item item : items) {
         // Usamos try-with-resources para asegurar que el InputStream se cierre correctamente
