@@ -1,0 +1,109 @@
+import java.lang.reflect.*;
+import java.util.*;
+import java.util.regex.Pattern;
+
+public class ValidadorDeUrls {
+
+    private static final Pattern URL_PATTERN = Pattern.compile("(?i)https?://");
+
+    /**
+     * Punto de entrada principal para validar un DTO completo (con objetos anidados).
+     */
+    public boolean contieneUrlEnObjeto(Object objeto) {
+        return contieneUrlEnObjeto(objeto, new HashSet<>());
+    }
+
+    /**
+     * Método recursivo que inspecciona campos, listas, mapas, arrays, etc.
+     */
+    private boolean contieneUrlEnObjeto(Object objeto, Set<Object> visitados) {
+        if (objeto == null || visitados.contains(objeto)) return false;
+        visitados.add(objeto);
+
+        // Si es una cadena, validar por patrón
+        if (objeto instanceof String valor) {
+            return URL_PATTERN.matcher(valor).find();
+        }
+
+        // Si es una colección (List, Set, etc.)
+        if (objeto instanceof Collection<?> coleccion) {
+            for (Object item : coleccion) {
+                if (contieneUrlEnObjeto(item, visitados)) return true;
+            }
+            return false;
+        }
+
+        // Si es un mapa (Map<String, ?>, etc.)
+        if (objeto instanceof Map<?, ?> mapa) {
+            for (Object valor : mapa.values()) {
+                if (contieneUrlEnObjeto(valor, visitados)) return true;
+            }
+            return false;
+        }
+
+        // Si es un array
+        if (objeto.getClass().isArray()) {
+            int length = Array.getLength(objeto);
+            for (int i = 0; i < length; i++) {
+                Object element = Array.get(objeto, i);
+                if (contieneUrlEnObjeto(element, visitados)) return true;
+            }
+            return false;
+        }
+
+        // Ignorar tipos básicos
+        if (esTipoBasico(objeto.getClass())) {
+            return false;
+        }
+
+        // Explorar campos del objeto vía reflexión
+        Field[] campos = objeto.getClass().getDeclaredFields();
+        for (Field campo : campos) {
+            campo.setAccessible(true);
+            try {
+                Object valorCampo = campo.get(objeto);
+                if (contieneUrlEnObjeto(valorCampo, visitados)) return true;
+            } catch (IllegalAccessException e) {
+                // Puedes loguear o lanzar error según tu política
+                e.printStackTrace();
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Determina si una clase es "básica" y no necesita exploración.
+     */
+    private boolean esTipoBasico(Class<?> clazz) {
+        return clazz.isPrimitive()
+            || clazz.equals(String.class)
+            || Number.class.isAssignableFrom(clazz)
+            || Boolean.class.equals(clazz)
+            || Character.class.equals(clazz)
+            || Date.class.isAssignableFrom(clazz)
+            || clazz.isEnum()
+            || clazz.getName().startsWith("java.time"); // opcional
+    }
+}
+
+
+zzzz
+
+uso
+DireccionDTO dir = new DireccionDTO();
+dir.setCalle("Av. Principal");
+dir.setReferencia("http://malicioso.com");
+
+ClienteDTO cliente = new ClienteDTO();
+cliente.setNombre("Carlos");
+cliente.setDireccion(dir);
+cliente.setComentarios(List.of("Todo bien", "Validar https://ataque.com"));
+
+ValidadorDeUrls validador = new ValidadorDeUrls();
+
+if (validador.contieneUrlEnObjeto(cliente)) {
+    System.out.println("🚨 Contiene URL maliciosa");
+} else {
+    System.out.println("✅ Objeto limpio");
+}
