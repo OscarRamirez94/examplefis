@@ -1,0 +1,3 @@
+if (authorization != null && (authorization.contains("http://") || authorization.contains("https://"))) {
+    throw new SecurityException("Authorization no puede contener URLs");
+}
