@@ -137,3 +137,17 @@ if (validador.contieneUrlEnObjeto(usuario)) {
 } else {
     System.out.println("✅ DTO limpio.");
 }
+
+
+import jakarta.validation.constraints.Pattern;
+
+public class MiDTO {
+
+    @Pattern(
+        regexp = "^(?!.*https?://).*$",
+        message = "El campo no debe contener URLs (http o https)"
+    )
+    private String comentario;
+
+    // getters y setters
+}
