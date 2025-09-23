@@ -1,4 +1,4 @@
-private static final Pattern URL_PATTERN = Pattern.compile("(?i)https?://");
+2private static final Pattern URL_PATTERN = Pattern.compile("(?i)https?://");
 
 public boolean contieneUrl(Map<String, String> mapa) {
     return mapa.values().stream()
@@ -121,4 +121,19 @@ public class ValidadorDeUrls {
             || Date.class.isAssignableFrom(clazz)
             || clazz.isEnum();
     }
+}
+
+
+example 
+
+
+PerfilDTO perfil = new PerfilDTO("admin", "https://malicioso.com/foto.jpg");
+UsuarioDTO usuario = new UsuarioDTO("Carlos", perfil);
+
+ValidadorDeUrls validador = new ValidadorDeUrls();
+
+if (validador.contieneUrlEnObjeto(usuario)) {
+    System.out.println("🚨 El DTO contiene una URL (incluso anidada)");
+} else {
+    System.out.println("✅ DTO limpio.");
 }
