@@ -1,0 +1,46 @@
+public RestResponse<Map<String, Object>> getMapRestResponseFromPassport(
+    String mobileFlowName,
+    Map<String, String> properties,
+    String passportUrl,
+    String passportServiceName
+) {
+    // ✅ Validación de seguridad mínima para cumplir con Checkmarx
+    URI uri;
+    try {
+        uri = new URI(passportUrl);
+        if (!"https".equalsIgnoreCase(uri.getScheme())) {
+            throw new IllegalArgumentException("Solo se permiten URLs HTTPS");
+        }
+
+        // ✅ (Opcional) Validar host contra lista blanca
+        List<String> allowedHosts = List.of(
+            "api1.miempresa.com",
+            "api2.miempresa.com",
+            "servicios.seguridad.com"
+        );
+        if (!allowedHosts.contains(uri.getHost())) {
+            throw new IllegalArgumentException("Host no autorizado: " + uri.getHost());
+        }
+
+    } catch (URISyntaxException e) {
+        throw new IllegalArgumentException("URL malformada: " + passportUrl);
+    }
+
+    // 🔧 Agrega headers desde el mapa
+    HttpHeaders headers = new HttpHeaders();
+    properties.forEach(headers::add);
+
+    // 📤 Armar el request GET
+    RequestEntity<Void> requestEntity = RequestEntity
+        .get(uri)
+        .headers(headers)
+        .build();
+
+    // 📥 Hacer el request
+    ResponseEntity<Map<String, Object>> responseEntity = restTemplate.exchange(
+        requestEntity,
+        new ParameterizedTypeReference<Map<String, Object>>() {}
+    );
+
+    return new RestResponse<>(mobileFlowName, passportServiceName, responseEntity);
+}
