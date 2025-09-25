@@ -1,0 +1,36 @@
+import java.util.List;
+
+public class UrlValidator {
+
+    // Lista blanca de inicios de URL válidos
+    private static final List<String> ALLOWED_URL_PREFIXES = List.of(
+        "https://claudia.bns/oauth/v1/",
+        "https://sandbox.bns/oauth/v1/",
+        "https://qa.bns/oauth/v1/"
+        // Agrega aquí otros entornos permitidos si aplica
+    );
+
+    public static void validatePassportUrl(String url) {
+        if (url == null || url.isBlank()) {
+            throw new SecurityException("URL vacía o nula no permitida");
+        }
+
+        boolean isValid = ALLOWED_URL_PREFIXES.stream()
+            .anyMatch(url::startsWith);
+
+        if (!isValid) {
+            throw new SecurityException("URL no autorizada: " + url);
+        }
+    }
+}
+
+
+
+UrlValidator.validatePassportUrl(passportUrlTokenInfo); // 🔒
+
+ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+    passportUrlTokenInfo,
+    HttpMethod.POST,
+    entity,
+    new ParameterizedTypeReference<Map<String, Object>>() {}
+);
