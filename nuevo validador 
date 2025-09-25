@@ -1,0 +1,24 @@
+public RestResponse<Map<String, Object>> tokenInfo(String mobileFlowName, String body) {
+    validatePassportUrl(passportUrlTokenInfo); // 🔒 Línea clave para Checkmarx
+
+    HttpEntity<?> entity = new HttpEntity<>(body);
+    ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+        passportUrlTokenInfo,
+        HttpMethod.POST,
+        entity,
+        new ParameterizedTypeReference<Map<String, Object>>() {}
+    );
+
+    return new RestResponse<>(mobileFlowName, response.getBody());
+}
+
+private void validatePassportUrl(String url) {
+    try {
+        URL parsed = new URL(url);
+        if (!parsed.getHost().endsWith("miempresa.com")) {
+            throw new SecurityException("URL no autorizada para tokenInfo");
+        }
+    } catch (MalformedURLException e) {
+        throw new SecurityException("URL mal formada", e);
+    }
+}
