@@ -1,0 +1,7 @@
+@Bean
+public RedisMessageListenerContainer redisContainer(RedisConnectionFactory connectionFactory) {
+    RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+    container.setConnectionFactory(connectionFactory);
+    container.setEnableKeyspaceEvents(RedisMessageListenerContainer.KeyspaceEventsPolicy.DISABLED);
+    return container;
+}
