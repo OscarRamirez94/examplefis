@@ -112,3 +112,58 @@ logging:
     org.springframework.web.client.RestTemplate: DEBUG
     org.springframework.http.client: DEBUG
     org.apache.http: DEBUG
+
+!!!@
+
+
+package com.tuempresa.config;
+
+import java.util.List;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+@Configuration
+@EnableWebSecurity
+@Profile("dev") // <-- esta clase solo se activa en el perfil 'dev'
+public class SecurityConfigDev {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            // 🔒 Desactiva CSRF y permite CORS desde el frontend local
+            .csrf(csrf -> csrf.disable())
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            // 🔒 No guarda sesiones
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // 🔓 Permite todas las peticiones
+            .authorizeHttpRequests(auth -> auth
+                .anyRequest().permitAll()
+            )
+            // 🚫 Desactiva por completo la validación JWT
+            .oauth2ResourceServer(oauth2 -> oauth2.disable());
+
+        return http.build();
+    }
+
+    // 🌍 Permite llamadas desde localhost:9099 (frontend local)
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of("http://localhost:9099"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
+}
