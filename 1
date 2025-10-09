@@ -167,3 +167,13 @@ public class SecurityConfigDev {
         return source;
     }
 }
+
+
+
+Map<String, Object> datos = new HashMap<>();
+datos.put("nombre", "Ana");
+datos.put("edad", 30);
+
+PersonaDTO persona = new PersonaDTO();
+persona.setNombre(String.valueOf(datos.getOrDefault("nombre", "")));
+persona.setApellido(String.valueOf(datos.getOrDefault("apellido", "")));
