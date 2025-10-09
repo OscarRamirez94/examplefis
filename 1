@@ -177,3 +177,16 @@ datos.put("edad", 30);
 PersonaDTO persona = new PersonaDTO();
 persona.setNombre(String.valueOf(datos.getOrDefault("nombre", "")));
 persona.setApellido(String.valueOf(datos.getOrDefault("apellido", "")));
+
+
+
+
+repositories {
+    flatDir {
+        dirs '/ruta/a/mis/jars'
+    }
+}
+
+dependencies {
+    implementation name: 'ejemplo'
+}
