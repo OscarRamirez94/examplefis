@@ -190,3 +190,13 @@ repositories {
 dependencies {
     implementation name: 'ejemplo'
 }
+
+
+
+logging:
+  level:
+    feign: DEBUG
+    feign.Logger: DEBUG
+    org.springframework.cloud.openfeign: DEBUG
+    feign.client: DEBUG
+    com.netflix.loadbalancer: DEBUG
