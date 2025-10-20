@@ -1,0 +1,49 @@
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
+
+class RestrictionServiceTest {
+
+    @Mock
+    private Clock clock;
+
+    @InjectMocks
+    private RestrictionService restrictionService;
+
+    @Test
+    void shouldReturnTrueWhenCurrentTimeIsWithinRestriction() {
+        MockitoAnnotations.openMocks(this);
+
+        // 🕒 Simular que la hora actual es 10:00 AM
+        LocalTime simulatedTime = LocalTime.of(10, 0);
+        Clock fixedClock = Clock.fixed(
+                LocalDate.now().atTime(simulatedTime).atZone(ZoneId.systemDefault()).toInstant(),
+                ZoneId.systemDefault()
+        );
+        when(clock.instant()).thenReturn(fixedClock.instant());
+        when(clock.getZone()).thenReturn(fixedClock.getZone());
+
+        // 🧩 Configurar valores válidos para la restricción
+        restrictionService.enableRestriction = true;
+        restrictionService.minInitRestriction = 8;  // 08:00
+        restrictionService.minEndRestriction = 0;
+        restrictionService.finInitRestriction = 12; // 12:00
+        restrictionService.finEndRestriction = 0;
+
+        // ✅ Ejecutar
+        boolean result = restrictionService.isRestrictionScheduleExecute();
+
+        // 🧾 Verificar
+        assertTrue(result, "Debe devolver true porque la hora actual está dentro del rango de restricción");
+    }
+}
