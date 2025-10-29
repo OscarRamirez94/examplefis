@@ -1,4 +1,65 @@
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.HashMap;
+import java.util.Map;
+
+class AccountServiceImplTest {
+
+    private AccountServiceImpl accountService;
+    private BiocatchDto biocatchDto;
+    private BackendSession backendSession;
+
+    @BeforeEach
+    void setup() {
+        accountService = new AccountServiceImpl();
+        biocatchDto = Mockito.mock(BiocatchDto.class);
+        backendSession = Mockito.mock(BackendSession.class);
+
+        // Simulamos la cadena de llamadas: requestModel.getRequestSession().getBackendSession()
+        RequestSession requestSession = Mockito.mock(RequestSession.class);
+        Mockito.when(biocatchDto.getRequestSession()).thenReturn(requestSession);
+        Mockito.when(requestSession.getBackendSession()).thenReturn(backendSession);
+    }
+
+    @Test
+    void shouldReturnAccountWhenEncryptedAccountExists() {
+        Map<String, Object> accounts = new HashMap<>();
+        accounts.put("enc123", "plainAccount123");
+
+        Mockito.when(backendSession.getAccounts()).thenReturn(accounts);
+
+        String result = accountService.getAccount("enc123", biocatchDto);
+
+        assertEquals("plainAccount123", result);
+    }
+
+    @Test
+    void shouldReturnNullWhenAccountDoesNotExist() {
+        Map<String, Object> accounts = new HashMap<>();
+        Mockito.when(backendSession.getAccounts()).thenReturn(accounts);
+
+        String result = accountService.getAccount("missingKey", biocatchDto);
+
+        assertNull(result);
+    }
+
+    @Test
+    void shouldReturnParsedAccountWhenOnlyPlainAccountExists() {
+        Map<String, String> plainMap = new HashMap<>();
+        plainMap.put("ACCOUNT_PLAIN_BACKEND_SESSION", "accountValue|extraData");
+
+        Map<String, Object> accounts = new HashMap<>();
+        accounts.put("ACCOUNTS_PLAIN_BACKEND_SESSION", plainMap);
+
+        Mockito.when(backendSession.getAccounts()).thenReturn(accounts);
+
+        String result = accountService.getAccount("notEncrypted", biocatchDto);
+
+        assertEquals("accountValue", result);
+    №##########
 
 
 
